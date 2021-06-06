@@ -1,0 +1,26 @@
+{
+    "name": "xycc/config",
+    "description": "config",
+    "type": "library",
+    "authors": [
+        {
+            "name": "xycc",
+            "email": "loveuloveme@xycc.love"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\Config\\": ""
+        }
+    },
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "symfony/yaml": "5.1.x-dev",
+        "xycc/contract": "dev-master",
+        "yosymfony/toml": "1.0.x-dev"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

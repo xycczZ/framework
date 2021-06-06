@@ -1,0 +1,69 @@
+{
+    "name": "xycc/framework",
+    "description": "...",
+    "type": "library",
+    "authors": [
+        {
+            "name": "xycc",
+            "email": "xycc.invoker@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "ext-swoole": ">=4.6",
+        "symfony/console": "6.0.x-dev",
+        "symfony/yaml": "5.1.x-dev",
+        "yosymfony/toml": "1.0.x-dev",
+        "nikic/php-parser": "^4.10",
+        "psr/container": "^2.0|^1.1",
+        "psr/event-dispatcher": "1.0.x-dev",
+        "monolog/monolog": "~2.2",
+        "ext-pcntl": "*",
+        "symfony/http-foundation": "6.0.x-dev"
+    },
+    "replace": {
+        "xycc/contract": "self.version",
+        "xycc/container": "self.version",
+        "xycc/config": "self.version",
+        "xycc/core": "self.version",
+        "xycc/event": "self.version",
+        "xycc/route": "self.version",
+        "xycc/test": "self.version",
+        "xycc/http": "self.version",
+        "xycc/aspect": "self.version"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "10.0.x-dev",
+        "symfony/var-dumper": "6.0.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\": "src/"
+        },
+        "files": [
+            "src/Aspect/funcs.php",
+            "src/Container/funcs.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Xycc\\Winter\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "discover": [
+            "Xycc\\Winter\\Config\\ConfigBoot",
+            "Xycc\\Winter\\Event\\EventBoot",
+            "Xycc\\Winter\\Route\\RouterBoot",
+            "Xycc\\Winter\\Container\\ContainerBoot",
+            "Xycc\\Winter\\Core\\CoreBoot",
+            "Xycc\\Winter\\Http\\HttpBoot",
+            "Xycc\\Winter\\Aspect\\AspectBoot"
+        ]
+    },
+    "scripts": {
+        "clear-proxy": "rm -r ./runtime",
+        "post-autoload-dump": "Xycc\\Winter\\Container\\Application::postAutoloadDump"
+    }
+}

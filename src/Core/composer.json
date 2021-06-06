@@ -1,0 +1,25 @@
+{
+    "name": "xycc/core",
+    "description": "servers",
+    "type": "library",
+    "authors": [
+        {
+            "name": "xycc",
+            "email": "xycc.love@xycc.love"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\Core\\": ""
+        }
+    },
+    "require": {
+        "xycc/config": "dev-master",
+        "xycc/container": "dev-master",
+        "xycc/event": "dev-master",
+        "xycc/route": "dev-master",
+        "xycc/http": "dev-master",
+        "symfony/console": "5.x-dev"
+    }
+}

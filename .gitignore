@@ -1,0 +1,12 @@
+vendor/
+.idea/
+composer.lock
+.phpunit.result.cache
+.phpunit.cache
+.coverage
+config/
+!src/Contract/Config
+runtime/
+src/Core/IndexController.php
+index.php
+!tests/Config/config

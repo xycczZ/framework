@@ -1,0 +1,23 @@
+{
+    "name": "xycc/aspect",
+    "type": "library",
+    "authors": [
+        {
+            "name": "invoker",
+            "email": "xycc.love@xycc.love"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "ext-swoole": ">=4.6",
+        "nikic/php-parser": "^4.10",
+        "xycc/container": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\Aspect\\": ""
+        },
+        "files": ["funcs.php"]
+    }
+}

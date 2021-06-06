@@ -1,0 +1,24 @@
+{
+    "name": "xycc/route",
+    "description": "route",
+    "type": "library",
+    "authors": [
+        {
+            "name": "invoker",
+            "email": "xycc.love@xycc.love"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "xycc/contract": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\Route\\": ""
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

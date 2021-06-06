@@ -1,0 +1,25 @@
+{
+    "name": "xycc/container",
+    "description": "container",
+    "type": "library",
+    "authors": [
+        {
+            "name": "xycc",
+            "email": "loveuloveme@xycc.love"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Xycc\\Winter\\Container\\": ""
+        },
+        "files": ["funcs.php"]
+    },
+    "require": {
+        "php": ">=8.0",
+        "ext-swoole": ">=4.6",
+        "xycc/contract": "dev-master",
+        "nikic/php-parser": "^4.10",
+        "xycc/config": "dev-master"
+    },
+    "minimum-stability": "dev"
+}
