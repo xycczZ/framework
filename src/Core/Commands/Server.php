@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Xycc\Winter\Core\Commands;
 
 
+use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Xycc\Winter\Container\Application;
+use Xycc\Winter\Core\Servers\HttpServer;
 
 
 class Server extends Command
@@ -42,14 +44,18 @@ class Server extends Command
         return 0;
     }
 
-    private function start(string $action, string $server)
+    private function start(string $action, string $serverName)
     {
         $config = $this->app->get('config');
-        $servers = $config->get(sprintf('server.%s-servers', $server));
+        $serverConfig = $config->get(sprintf('server.%s', $serverName));
 
-        foreach ($servers as $serverConfig) {
-            $server = $this->app->get($serverConfig['class']);
-            $server->{$action}($serverConfig);
+        switch ($serverName) {
+            case 'http':
+                $server = $this->app->get(HttpServer::class);
+                $server->{$action}($serverConfig);
+                break;
+            default:
+                throw new RuntimeException('todo');
         }
         return 0;
     }

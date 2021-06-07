@@ -10,3 +10,4 @@ runtime/
 src/Core/IndexController.php
 index.php
 !tests/Config/config
+!src/Core/Config

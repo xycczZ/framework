@@ -29,6 +29,7 @@ use Xycc\Winter\Route\Router;
 class HttpServer
 {
     private Server $server;
+    private array $settings = [];
 
     public function __construct(
         private Application $app,
@@ -47,6 +48,7 @@ class HttpServer
 
     public function start(array $serverConfig)
     {
+        $this->settings = $serverConfig;
         $server = new Server($serverConfig['host'], $serverConfig['port']);
         if (isset($serverConfig['settings']['log_file'])) {
             if (!is_dir(dirname($serverConfig['settings']['log_file']))) {
@@ -86,14 +88,16 @@ class HttpServer
 
     public function onStart(Server $server)
     {
-        swoole_set_process_name('winter: master');
+        $name = $this->settings['name'] ?? $this->config->get('app.name');
+        @swoole_set_process_name(sprintf('%s: master', $name ?: 'winter'));
 
         echo sprintf('http server start on http://%s:%s' . PHP_EOL, $server->host, $server->port);
     }
 
     public function onManagerStart(Server $server)
     {
-        swoole_set_process_name('winter: manager');
+        $name = $this->settings['name'] ?? $this->config->get('app.name');
+        @swoole_set_process_name(sprintf('%s: manager', $name ?: 'winter'));
     }
 
     public function onShutdown(Server $server)
@@ -104,11 +108,13 @@ class HttpServer
 
     public function onWorkerStart(Server $server, int $workerId)
     {
+        $name = $this->settings['name'] ?? $this->config->get('app.name');
+
         if ($server->taskworker) {
-            swoole_set_process_name("winter: task - $workerId");
+            @swoole_set_process_name(sprintf('%s: task - %d', $name ?: 'winter', $workerId));
             $this->taskStart($server, $workerId);
         } else {
-            swoole_set_process_name("winter: worker - $workerId");
+            @swoole_set_process_name(sprintf('%s: worker - %d', $name ?: 'winter', $workerId));
             $this->workerStart($server, $workerId);
         }
     }

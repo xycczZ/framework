@@ -11,7 +11,6 @@ class ContainerBoot extends Bootstrap
 {
     public function boot(ContainerContract $container): void
     {
-        $container->publishFiles(__DIR__ . '/config/app.yaml');
     }
 
     public static function scanPath(): array
