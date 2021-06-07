@@ -7,7 +7,7 @@ composer.lock
 config/
 !src/Contract/Config
 runtime/
-src/Core/IndexController.php
 index.php
 !tests/Config/config
 !src/Core/Config
+src/Temp

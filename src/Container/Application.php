@@ -29,7 +29,6 @@ class Application implements ContainerContract
     protected BeanDefinitionCollection $beanDefinitions;
 
     protected array $boots = [];
-    protected static array $discovers = [];
 
     protected array $bootstraps = [];
 

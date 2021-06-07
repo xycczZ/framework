@@ -12,6 +12,6 @@ class RouteMatchException extends RuntimeException
     public function render(Response $response)
     {
         $response->setStatusCode(404);
-        $response->setContent(['error' => 'not found']);
+        $response->setContent(['error' => $this->getMessage()]);
     }
 }

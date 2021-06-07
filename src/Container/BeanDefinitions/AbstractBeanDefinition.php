@@ -82,11 +82,11 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
                 if ($parent !== null && $this->scopeMode === Scope::MODE_PROXY) {
                     $instance = $this->createProxy($hasType);
                 } elseif ($parent === null) {
-                    if (!isset($this->instance[Coroutine::getCid()])) {
+                    if (!isset($this->instance[Coroutine::getContext()['fd']])) {
                         $instance = $this->resolveInstance($extra);
-                        $this->instance[Coroutine::getCid()] = $instance;
+                        $this->instance[Coroutine::getContext()['fd']] = $instance;
                     } else {
-                        $instance = $this->instance[Coroutine::getCid()];
+                        $instance = $this->instance[Coroutine::getContext()['fd']];
                     }
                 } else {
                     $instance = $this->resolveInstance($extra);

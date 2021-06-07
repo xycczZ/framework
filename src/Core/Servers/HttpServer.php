@@ -17,6 +17,7 @@ use Swoole\Server\TaskResult;
 use Xycc\Winter\Container\Application;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Config\ConfigContract;
+use Xycc\Winter\Core\CoreBoot;
 use Xycc\Winter\Core\Events\OnRequest;
 use Xycc\Winter\Event\EventDispatcher;
 use Xycc\Winter\Http\ExceptionManager;
@@ -24,6 +25,7 @@ use Xycc\Winter\Http\MiddlewareManager;
 use Xycc\Winter\Http\Request\Request;
 use Xycc\Winter\Http\Response\Response;
 use Xycc\Winter\Route\Router;
+
 
 #[Bean]
 class HttpServer
@@ -69,6 +71,10 @@ class HttpServer
         $server->on('finish', [$this, 'onFinish']);
 
         $this->server = $server;
+        foreach (CoreBoot::getProcesses() as $process) {
+            $userProcess = new Process(fn ($p) => $process['instance']->run($server, $p), $process['redirect'], $process['pipe'], $process['coroutine']);
+            $server->addProcess($userProcess);
+        }
         $server->start();
     }
 
