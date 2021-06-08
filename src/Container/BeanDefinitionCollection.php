@@ -98,44 +98,44 @@ class BeanDefinitionCollection
         return count($this->findDefinitionsByClass($class)) > 0;
     }
 
-    public function getClassesByAttr(string $attribute, bool $extends = false): array
+    public function getClassesByAttr(string $attribute, bool $extends = false, bool $direct = false): array
     {
         return $this->filterDefinitions(
-            fn (AbstractBeanDefinition $definition) => $definition->classHasAttribute($attribute, $extends)
+            fn (AbstractBeanDefinition $definition) => $definition->classHasAttribute($attribute, $extends, $direct)
         );
     }
 
     /**
      * @return string[]
      */
-    public function getMethodsByAttr(string $class, string $attribute, bool $extends = false): array
+    public function getMethodsByAttr(string $class, string $attribute, bool $extends = false, bool $direct = false): array
     {
         return filter_map($this->coll,
             fn (AbstractBeanDefinition $definition) => $definition->getClassName() !== $class ? []
                 : array_values(array_filter($definition->getMethodNames(),
-                    fn (string $method) => $definition->methodHasAttribute($method, $attribute, $extends))), [])[$class];
+                    fn (string $method) => $definition->methodHasAttribute($method, $attribute, $extends, $direct))), [])[$class];
     }
 
     /**
      * @return string[]
      */
-    public function getPropsByAttr(string $class, string $attribute, bool $extends = false): array
+    public function getPropsByAttr(string $class, string $attribute, bool $extends = false, bool $direct = false): array
     {
         return filter_map($this->coll,
             fn (AbstractBeanDefinition $definition) => $definition->getClassName() !== $class ? []
                 : array_values(array_filter($definition->getPropNames(),
-                    fn (string $prop) => $definition->propHasAttribute($prop, $attribute, $extends))), [])[$class];
+                    fn (string $prop) => $definition->propHasAttribute($prop, $attribute, $extends, $direct))), [])[$class];
     }
 
     /**
      * @return string[]
      */
-    public function getParamsByAttr(string $class, string $method, string $attribute, bool $extends = false): array
+    public function getParamsByAttr(string $class, string $method, string $attribute, bool $extends = false, bool $direct = false): array
     {
         return filter_map($this->coll,
             fn (AbstractBeanDefinition $definition) => $definition->getClassName() !== $class ? []
                 : array_values(array_filter($definition->getMethodParamNames($method),
-                    fn (string $param) => $definition->paramHasAttribute($method, $param, $attribute, $extends))), [])[$class][$method];
+                    fn (string $param) => $definition->paramHasAttribute($method, $param, $attribute, $extends, $direct))), [])[$class][$method];
     }
 
     public static function appendSemi(string $id)

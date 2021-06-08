@@ -324,12 +324,12 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 
     protected function filterAttribute(array $attributes, string $attribute, bool $extends = false): array
     {
-        return array_filter(
+        return array_values(array_filter(
             $attributes,
             fn (ReflectionAttribute $attr) => $extends
                 ? $this->isSameOrSubClassOf($attribute, $attr->getName())
                 : $attribute === $attr->getName()
-        );
+        ));
     }
 
     #[Pure]

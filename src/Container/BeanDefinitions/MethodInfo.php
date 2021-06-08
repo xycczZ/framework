@@ -10,15 +10,17 @@ trait MethodInfo
     /**@var ReflectionAttribute[][] 方法的注解数组 */
     protected array $methodAttributes = [];
 
+    protected array $allMethodAttributes = [];
+
     /**
      * @return ReflectionAttribute[]
      */
-    public function getAllMethodAttributes(string $methodName = ''): array
+    public function getAllMethodAttributes(string $methodName = '', bool $direct = false): array
     {
         if ($methodName) {
-            return $this->methodAttributes[$methodName];
+            return $direct ? $this->methodAttributes[$methodName] : $this->allMethodAttributes[$methodName];
         }
-        return $this->methodAttributes;
+        return $direct ? $this->methodAttributes : $this->allMethodAttributes;
     }
 
     /**
@@ -28,10 +30,10 @@ trait MethodInfo
      * @param bool   $extends
      * @return string[]
      */
-    public function getMethods(string $attribute, bool $extends = false): array
+    public function getMethods(string $attribute, bool $extends = false, bool $direct = false): array
     {
         $methods = $this->getMethodNames();
-        return array_filter($methods, fn (string $method) => $this->methodHasAttribute($method, $attribute, $extends));
+        return array_filter($methods, fn (string $method) => $this->methodHasAttribute($method, $attribute, $extends, $direct));
     }
 
     /**
@@ -39,7 +41,7 @@ trait MethodInfo
      */
     public function getMethodNames(): array
     {
-        return array_keys($this->methodAttributes);
+        return array_keys($this->allMethodAttributes);
     }
 
     /**
@@ -50,9 +52,9 @@ trait MethodInfo
      * @param bool   $extends
      * @return bool
      */
-    public function methodHasAttribute(string $method, string $attribute, bool $extends = false): bool
+    public function methodHasAttribute(string $method, string $attribute, bool $extends = false, bool $direct = false): bool
     {
-        return count($this->getMethodAttributes($method, $attribute, $extends)) > 0;
+        return count($this->getMethodAttributes($method, $attribute, $extends, $direct)) > 0;
     }
 
     /**
@@ -63,12 +65,13 @@ trait MethodInfo
      * @param bool   $extends
      * @return ReflectionAttribute[]
      */
-    public function getMethodAttributes(string $method, string $attribute, bool $extends = false): array
+    public function getMethodAttributes(string $method, string $attribute, bool $extends = false, bool $direct = false): array
     {
-        if (!isset($this->methodAttributes[$method])) {
+        $prop = $direct ? 'methodAttributes' : 'allMethodAttributes';
+        if (!isset($this->{$prop}[$method])) {
             return [];
         }
 
-        return $this->filterAttribute($this->methodAttributes[$method], $attribute, $extends);
+        return $this->filterAttribute($this->{$prop}[$method], $attribute, $extends);
     }
 }

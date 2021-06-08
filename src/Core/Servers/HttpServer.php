@@ -9,7 +9,8 @@ use Monolog\Logger;
 use Swoole\Coroutine;
 use Swoole\Http\Request as SwooleRequest;
 use Swoole\Http\Response as SwooleResponse;
-use Swoole\Http\Server;
+//use Swoole\Http\Server;
+use Swoole\WebSocket\Server;
 use Swoole\Process;
 use Swoole\Server\Event;
 use Swoole\Server\Task;
@@ -69,6 +70,7 @@ class HttpServer
         $server->on('managerStart', [$this, 'onManagerStart']);
         $server->on('task', [$this, 'onTask']);
         $server->on('finish', [$this, 'onFinish']);
+        $server->on('message', fn () => true);
 
         $this->server = $server;
         foreach (CoreBoot::getProcesses() as $process) {
@@ -190,7 +192,7 @@ class HttpServer
             $this->em->catchStatus($e);
             $resp = $this->app->get(Response::class);
             if (!$resp->getContent()) {
-                $resp->setContent(['error' => 'Internal Error']);
+                $resp->setContent(['trace' => $e->getTrace(), 'msg' => $e->getMessage()]);
             }
             $resp->send();
             return;
@@ -199,7 +201,7 @@ class HttpServer
         /**@var Response $resp */
         $this->em->catchStatus(null);
         $resp->send();
-        $this->app->clearRequest();
+        $this->app->clearRequest($request->fd);
     }
 
     /**

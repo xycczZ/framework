@@ -240,29 +240,29 @@ class Application implements ContainerContract
         return false;
     }
 
-    public function getClassesByAttr(string $attr, bool $extends = false): array
+    public function getClassesByAttr(string $attr, bool $extends = false, bool $direct = false): array
     {
-        return $this->beanDefinitions->getClassesByAttr($attr, $extends);
+        return $this->beanDefinitions->getClassesByAttr($attr, $extends, $direct);
     }
 
-    public function getMethodsByAttr(string $class, string $attr, bool $extends = false): array
+    public function getMethodsByAttr(string $class, string $attr, bool $extends = false, bool $direct = false): array
     {
-        return $this->beanDefinitions->getMethodsByAttr($class, $attr, $extends);
+        return $this->beanDefinitions->getMethodsByAttr($class, $attr, $extends, $direct);
     }
 
-    public function getPropsByAttr(string $class, string $attr, bool $extends = false): array
+    public function getPropsByAttr(string $class, string $attr, bool $extends = false, bool $direct = false): array
     {
-        return $this->beanDefinitions->getPropsByAttr($class, $attr, $extends);
+        return $this->beanDefinitions->getPropsByAttr($class, $attr, $extends, $direct);
     }
 
-    public function getParamsByAttr(string $class, string $method, string $attr, bool $extends = false): array
+    public function getParamsByAttr(string $class, string $method, string $attr, bool $extends = false, bool $direct = false): array
     {
-        return $this->beanDefinitions->getParamsByAttr($class, $method, $attr, $extends);
+        return $this->beanDefinitions->getParamsByAttr($class, $method, $attr, $extends, $direct);
     }
 
-    public function clearRequest()
+    public function clearRequest(int $id)
     {
-        $this->beanDefinitions->clearRequest(Coroutine::getCid());
+        $this->beanDefinitions->clearRequest($id);
     }
 
     public function clearSession(int $id)

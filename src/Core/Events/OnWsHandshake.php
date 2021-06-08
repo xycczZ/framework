@@ -1,19 +1,21 @@
 <?php
-
+declare(strict_types=1);
 
 namespace Xycc\Winter\Core\Events;
 
 use Swoole\Http\Request;
+use Swoole\Http\Response;
+use Swoole\WebSocket\Server;
 use Xycc\Winter\Contract\Attributes\Lazy;
-use Xycc\Winter\Contract\Attributes\Scope;
-use Xycc\Winter\Event\AbstractEvent;
 use Xycc\Winter\Event\Attributes\Event;
 
 #[Event, Lazy]
-class OnRequest extends AbstractEvent
+class OnWsHandshake
 {
     public function __construct(
-        public Request $request
+        public Request $request,
+        public Response $response,
+        public Server $server,
     )
     {
     }

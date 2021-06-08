@@ -36,7 +36,8 @@
     "require-dev": {
         "phpunit/phpunit": "10.0.x-dev",
         "symfony/var-dumper": "6.0.x-dev",
-        "swoole/ide-helper": "@dev"
+        "swoole/ide-helper": "@dev",
+        "twig/twig": "3.x-dev"
     },
     "autoload": {
         "psr-4": {

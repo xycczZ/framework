@@ -10,12 +10,14 @@ trait PropInfo
     /**@var ReflectionAttribute[][] 属性的注解数组 */
     protected array $propertyAttributes = [];
 
+    protected array $allPropertyAttributes = [];
+
     /**
      * @return ReflectionAttribute[]
      */
-    public function getAllPropertyAttributes(): array
+    public function getAllPropertyAttributes(bool $direct = false): array
     {
-        return $this->propertyAttributes;
+        return $direct ? $this->propertyAttributes : $this->allPropertyAttributes;
     }
 
     /**
@@ -25,10 +27,10 @@ trait PropInfo
      * @param bool   $extends
      * @return string[]
      */
-    public function getProps(string $attribute, bool $extends = false): array
+    public function getProps(string $attribute, bool $extends = false, bool $direct = false): array
     {
         $props = $this->getPropNames();
-        return array_filter($props, fn (string $prop) => $this->propHasAttribute($prop, $attribute, $extends));
+        return array_filter($props, fn (string $prop) => $this->propHasAttribute($prop, $attribute, $extends, $direct));
     }
 
     /**
@@ -36,7 +38,7 @@ trait PropInfo
      */
     public function getPropNames(): array
     {
-        return array_keys($this->propertyAttributes);
+        return array_keys($this->allPropertyAttributes);
     }
 
     /**
@@ -47,9 +49,9 @@ trait PropInfo
      * @param bool   $extends
      * @return bool
      */
-    public function propHasAttribute(string $prop, string $attribute, bool $extends = false): bool
+    public function propHasAttribute(string $prop, string $attribute, bool $extends = false, bool $direct = false): bool
     {
-        return count($this->getPropAttrs($prop, $attribute, $extends)) > 0;
+        return count($this->getPropAttrs($prop, $attribute, $extends, $direct)) > 0;
     }
 
     /**
@@ -60,12 +62,18 @@ trait PropInfo
      * @param bool   $extends
      * @return ReflectionAttribute[]
      */
-    public function getPropAttrs(string $prop, string $attribute, bool $extends = false): array
+    public function getPropAttrs(string $prop, string $attribute, bool $extends = false, bool $direct = false): array
     {
-        if (!isset($this->propertyAttributes[$prop])) {
+        if (!isset($this->allPropertyAttributes[$prop])) {
             return [];
         }
 
-        return $this->filterAttribute($this->propertyAttributes[$prop], $attribute, $extends);
+        return $this->filterAttribute(
+            $direct
+                ? $this->propertyAttributes[$prop]
+                : $this->allPropertyAttributes[$prop],
+            $attribute,
+            $extends
+        );
     }
 }
