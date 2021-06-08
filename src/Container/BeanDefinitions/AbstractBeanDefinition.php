@@ -50,6 +50,9 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 
     public function getInstance(array $extra = [], AbstractBeanDefinition $parent = null, bool $hasType = true): mixed
     {
+        if (! $this->bean) {
+            throw new NotFoundException($this->className ?: '');
+        }
         switch ($this->scope) {
             case Scope::SCOPE_SINGLETON:
                 if (!$this->instance) {

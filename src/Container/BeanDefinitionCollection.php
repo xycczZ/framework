@@ -32,19 +32,19 @@ class BeanDefinitionCollection
         $this->coll[$definition->getId()] = $definition;
     }
 
-    public function findDefinitionsByClass(string $class): array
+    public function findDefinitionsByClass(string $class, bool $isBean = true): array
     {
-        return $this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getClassName() === $class);
+        return $this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getClassName() === $class && (!$isBean || $definition->isBean()));
     }
 
-    public function findDefinitionsByType(string $abstract): array
+    public function findDefinitionsByType(string $abstract, bool $isBean = true): array
     {
-        return $this->filterDefinitions(fn (AbstractBeanDefinition $def) => $def->getClassName() === $abstract || is_subclass_of($def->getClassName(), $abstract));
+        return $this->filterDefinitions(fn (AbstractBeanDefinition $def) => ($def->getClassName() === $abstract || is_subclass_of($def->getClassName(), $abstract) && (!$isBean || $def->isBean())));
     }
 
     public function findHighestPriorityDefinitionByType(string $abstract): AbstractBeanDefinition
     {
-        $defs = $this->findDefinitionsByType($abstract);
+        $defs = $this->findDefinitionsByType($abstract, true);
         if (count($defs) === 1) {
             return $defs[0];
         } elseif (count($defs) === 0) {

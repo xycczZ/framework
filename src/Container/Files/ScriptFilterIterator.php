@@ -35,7 +35,8 @@ class ScriptFilterIterator extends RecursiveFilterIterator
             return false;
         }
 
-        $ref = new ReflectionClass($className);
-        return count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0;
+        //$ref = new ReflectionClass($className);
+        //return count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0;
+        return true;
     }
 }

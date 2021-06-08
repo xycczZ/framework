@@ -9,7 +9,7 @@ use Swoole\WebSocket\Server;
 use Xycc\Winter\Contract\Attributes\Lazy;
 use Xycc\Winter\Event\Attributes\Event;
 
-#[Event, Lazy]
+#[Event]
 class OnWsHandshake
 {
     public function __construct(

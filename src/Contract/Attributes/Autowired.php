@@ -7,7 +7,7 @@ use Attribute;
 use JetBrains\PhpStorm\ExpectedValues;
 
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_METHOD | Attribute::TARGET_PROPERTY)]
-class Autowired
+final class Autowired
 {
     public const AUTO = 0;
     public const BY_TYPE = 1;

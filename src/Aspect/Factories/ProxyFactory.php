@@ -62,7 +62,8 @@ class ProxyFactory
     {
         // 有类型的， 非Final的， 可以实例化的才可以切入
         $defs = $this->collection->filterDefinitions(
-            fn (AbstractBeanDefinition $def) => $def->getFile() !== null &&
+            fn (AbstractBeanDefinition $def) => $def->isBean() &&
+                $def->getFile() !== null &&
                 !$def->classHasAttribute(Aspect::class) &&
                 $def->getClassName() !== null &&
                 !$def->getRefClass()->isFinal() &&

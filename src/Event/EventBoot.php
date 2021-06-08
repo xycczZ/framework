@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Xycc\Winter\Event;
 
 
+use Xycc\Winter\Container\BeanDefinitionCollection;
+use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Contract\Bootstrap;
 use Xycc\Winter\Contract\Container\ContainerContract;
 use Xycc\Winter\Event\Attributes\Event;
@@ -16,7 +18,6 @@ class EventBoot extends Bootstrap
         $dispatcher = $container->get(EventDispatcher::class);
         $events = $container->getClassesByAttr(Event::class);
 
-        // 搜集所有的类，不管是否是 bean， 用个属性分隔开来
         foreach ($events as $event) {
             $dispatcher->addEvents($event->getClassName());
         }

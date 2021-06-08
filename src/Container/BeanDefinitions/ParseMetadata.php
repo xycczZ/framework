@@ -35,6 +35,8 @@ trait ParseMetadata
     protected int $order;
     protected bool $primary;
 
+    protected bool $bean = false;
+
     // 类的反射实例
     protected ReflectionClass $refClass;
     /**@var ReflectionMethod[] 方法的反射实例 */
@@ -95,18 +97,22 @@ trait ParseMetadata
         $order = $this->filterFirstAttribute($this->allClassAttributes, Order::class);
         $primary = $this->filterFirstAttribute($this->allClassAttributes, Primary::class);
 
-        $this->primary = $primary !== null;
-        $this->order = $order?->newInstance()?->value ?: Order::DEFAULT;
-        $scopeInstance = $scope?->newInstance();
-        $this->scope = $scopeInstance?->scope ?: Scope::SCOPE_SINGLETON;
-        $this->scopeMode = $scopeInstance?->mode ?: SCope::MODE_DEFAULT;
-        $this->lazyInit = $lazy !== null;
-        $this->name = $bean?->newInstance()?->value;
+        $this->bean = $bean !== null;
 
-        $this->isConfiguration = !empty(
-        array_filter($this->classAttributes,
-            fn ($attribute) => $attribute->getName() === Configuration::class)
-        );
+        if ($this->bean) {
+            $this->primary = $primary !== null;
+            $this->order = $order?->newInstance()?->value ?: Order::DEFAULT;
+            $scopeInstance = $scope?->newInstance();
+            $this->scope = $scopeInstance?->scope ?: Scope::SCOPE_SINGLETON;
+            $this->scopeMode = $scopeInstance?->mode ?: SCope::MODE_DEFAULT;
+            $this->lazyInit = $lazy !== null;
+            $this->name = $bean?->newInstance()?->value;
+
+            $this->isConfiguration = !empty(
+            array_filter($this->classAttributes,
+                fn ($attribute) => $attribute->getName() === Configuration::class)
+            );
+        }
     }
 
     // 搜集所有的注解, 每个注解只收集一次
@@ -139,8 +145,7 @@ trait ParseMetadata
         $this->allMethodAttributes[$method->getName()] = $this->collectAttributes($attributes, []);
 
         if ($this->isConfiguration) {
-            $beans = $method->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF);
-            if (count($beans) > 0) {
+            if ($this->methodHasAttribute($method->name, Bean::class, true)) {
                 $this->configurationMethods[] = $method;
             }
         }
@@ -176,5 +181,10 @@ trait ParseMetadata
         $attributes = $parameter->getAttributes();
         $this->paramAttributes[$method->getName()][$parameter->getName()] = $attributes;
         $this->allParamAttributes[$method->getName()][$parameter->getName()] = $this->collectAttributes($attributes, []);
+    }
+
+    public function isBean(): bool
+    {
+        return $this->bean;
     }
 }

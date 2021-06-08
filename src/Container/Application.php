@@ -153,11 +153,11 @@ class Application implements ContainerContract
     protected function parseFile(SplFileInfo $file)
     {
         $class = FileIterator::getClassName($file);
-        $ref = new ReflectionClass($class);
-        if (count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0) {
-            $beanDefinition = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
-            $this->beanDefinitions->add($beanDefinition);
-        }
+        //$ref = new ReflectionClass($class);
+        //if (count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0) {
+        $beanDefinition = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
+        $this->beanDefinitions->add($beanDefinition);
+        //}
     }
 
     protected function scanConfig()
@@ -200,7 +200,7 @@ class Application implements ContainerContract
      */
     protected function collectComponents()
     {
-        $definitions = $this->beanDefinitions->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->isSingleton() && !$definition->isLazyInit());
+        $definitions = $this->beanDefinitions->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->isBean() && $definition->isSingleton() && !$definition->isLazyInit());
 
         foreach ($definitions as $definition) {
             $definition->getInstance();

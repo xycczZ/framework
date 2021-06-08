@@ -4,11 +4,10 @@ declare(strict_types=1);
 namespace Xycc\Winter\Core\Events;
 
 use Swoole\Http\Response;
-use Xycc\Winter\Contract\Attributes\Lazy;
 use Xycc\Winter\Event\Attributes\Event;
 use Xycc\Winter\Http\Request\Request;
 
-#[Event, Lazy]
+#[Event]
 class OnWsRequest
 {
     public function __construct(
