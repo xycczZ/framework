@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Xycc\Winter\Container\BeanDefinitions;
 
 
-use JetBrains\PhpStorm\ExpectedValues;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -26,14 +25,6 @@ trait ParseMetadata
     protected array $configurationMethods = [];
     /**@var ReflectionMethod[] setter 方法 */
     protected array $setters = [];
-
-    #[ExpectedValues(flags: Scope::SCOPES)]
-    protected int $scope;
-    #[ExpectedValues(flags: Scope::MODES)]
-    protected int $scopeMode;
-    protected bool $lazyInit;
-    protected int $order;
-    protected bool $primary;
 
     protected bool $bean = false;
 
@@ -82,37 +73,47 @@ trait ParseMetadata
         }
     }
 
-    protected function filterFirstAttribute(array $attributes, string $attr): ?ReflectionAttribute
+    protected function filterFirstAttribute(array $attributes, string $attr, bool $extends = true): ?ReflectionAttribute
     {
-        return current(array_filter($attributes, fn (ReflectionAttribute $attribute) => $this->isSameOrSubClassOf($attribute->getName(), $attr))) ?: null;
+        return current(array_filter(
+            $attributes,
+            fn (ReflectionAttribute $attribute) => $extends
+                ? $this->isSameOrSubClassOf($attr, $attribute->getName())
+                : $attr === $attribute->getName()
+        )) ?: null;
     }
 
     protected function handleClassAttrs(ReflectionClass $ref): void
     {
         $this->classAttributes = $ref->getAttributes();
         $this->allClassAttributes = $this->collectAttributes($this->classAttributes, []);
-        $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class);
-        $scope = $this->filterFirstAttribute($this->allClassAttributes, Scope::class);
+        $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class)?->newInstance();
+        $scope = $this->filterFirstAttribute($this->allClassAttributes, Scope::class)?->newInstance();
         $lazy = $this->filterFirstAttribute($this->allClassAttributes, Lazy::class);
-        $order = $this->filterFirstAttribute($this->allClassAttributes, Order::class);
+        $order = $this->filterFirstAttribute($this->allClassAttributes, Order::class)?->newInstance();
         $primary = $this->filterFirstAttribute($this->allClassAttributes, Primary::class);
 
         $this->bean = $bean !== null;
 
-        if ($this->bean) {
-            $this->primary = $primary !== null;
-            $this->order = $order?->newInstance()?->value ?: Order::DEFAULT;
-            $scopeInstance = $scope?->newInstance();
-            $this->scope = $scopeInstance?->scope ?: Scope::SCOPE_SINGLETON;
-            $this->scopeMode = $scopeInstance?->mode ?: SCope::MODE_DEFAULT;
-            $this->lazyInit = $lazy !== null;
-            $this->name = $bean?->newInstance()?->value;
-
-            $this->isConfiguration = !empty(
-            array_filter($this->classAttributes,
-                fn ($attribute) => $attribute->getName() === Configuration::class)
-            );
+        if ($bean?->value !== null) {
+            $this->manager->addName($bean?->value, $this);
         }
+
+        $this->names[$bean?->value] = [
+            'instance' => null,
+            'configurationClass' => null,
+            'configurationMethod' => null,
+            'scope' => $scope?->scope,
+            'scopeMode' => $scope?->scopeMode,
+            'order' => $order?->vlaue,
+            'primary' => $primary !== null,
+            'lazy' => $lazy !== null,
+        ];
+
+        $this->isConfiguration = !empty(
+        array_filter($this->classAttributes,
+            fn ($attribute) => $attribute->getName() === Configuration::class)
+        );
     }
 
     // 搜集所有的注解, 每个注解只收集一次

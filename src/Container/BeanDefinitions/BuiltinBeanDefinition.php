@@ -10,12 +10,10 @@ use Xycc\Winter\Container\BeanDefinitionCollection;
 class BuiltinBeanDefinition extends AbstractBeanDefinition
 {
     public function __construct(
-        string $name,
         string $type,
         BeanDefinitionCollection $manager,
     )
     {
-        $this->name = $name;
         $this->className = $type;
         $this->manager = $manager;
     }
@@ -24,9 +22,8 @@ class BuiltinBeanDefinition extends AbstractBeanDefinition
     {
     }
 
-    protected function resolveInstance(array $extra = [])
+    protected function resolveInstance(array $info, array $extra = [])
     {
-        $configuration = $this->manager->findDefinitionById($this->configurationId);
-        return $this->invokeMethod($configuration->getInstance(), $this->configurationMethod, $extra);
+        return $this->invokeConfiguration($info, $extra);
     }
 }

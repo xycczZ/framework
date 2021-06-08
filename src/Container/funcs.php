@@ -41,3 +41,25 @@ if (!function_exists('convert_extra_type')) {
         };
     }
 }
+
+if (!function_exists('flatten_map')) {
+    function flatten_map(array $arr, callable $func = null, int $depth = INF): array
+    {
+        $keys = array_keys($arr);
+        $arr = array_map($func, $arr, $keys);
+        do {
+            $result = [];
+            foreach ($arr as $item) {
+                if (is_array($item)) {
+                    $result = array_merge($result, $item);
+                } else {
+                    $result[] = $item;
+                }
+            }
+            $arr = $result;
+            $hasArr = count(array_filter($arr, fn ($item) => is_array($item))) > 0;
+        } while ($depth <= 0 || !$hasArr);
+
+        return $arr;
+    }
+}

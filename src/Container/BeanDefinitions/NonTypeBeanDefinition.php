@@ -10,20 +10,30 @@ use Xycc\Winter\Container\BeanDefinitionCollection;
 
 class NonTypeBeanDefinition extends AbstractBeanDefinition
 {
+    private string $name;
+
     public function __construct(string $name, BeanDefinitionCollection $manager)
     {
         $this->name = $name;
+        //if (isset($this->names[$name])) {
+        //    throw new DuplicatedIdentityException(null, [$name]);
+        //}
         $this->className = null;
         $this->manager = $manager;
+        $this->manager->addName($name, $this);
+    }
+
+    public function getName()
+    {
+        return $this->name;
     }
 
     final protected function parseMetadata(ReflectionClass $ref): void
     {
     }
 
-    protected function resolveInstance(array $extra = [])
+    protected function resolveInstance(array $info, array $extra = [])
     {
-        $configuration = $this->manager->findDefinitionById($this->configurationId);
-        return $this->invokeMethod($configuration->getInstance(), $this->configurationMethod, $extra);
+        return $this->invokeConfiguration($info, $extra);
     }
 }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Xycc\Winter\Container;
 
 use Closure;
-use ReflectionAttribute;
-use ReflectionClass;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -13,7 +11,6 @@ use ReflectionParameter;
 use ReflectionType;
 use RuntimeException;
 use SplFileInfo;
-use Swoole\Coroutine;
 use Xycc\Winter\Config\Config;
 use Xycc\Winter\Container\{BeanDefinitions\AbstractBeanDefinition,
     BeanDefinitions\ClassBeanDefinition,
@@ -49,13 +46,13 @@ class Application implements ContainerContract
     }
 
     // string $id
-    public function get($id, ?string $type = null, int $mode = Autowired::AUTO, bool $required = true, array $extra = [])
+    public function get($id, ?string $type = null, bool $required = true, array $extra = [])
     {
-        return match ($mode) {
-            Autowired::AUTO => $this->getByName($id, extra: $extra) ?? $this->getByType($type ?? $id, extra: $extra),
-            Autowired::BY_NAME => $this->getByName($id, extra: $extra),
-            Autowired::BY_TYPE => $this->getByType($type ?? $id, extra: $extra),
-        };
+        $result = $this->getByName($id, extra: $extra) ?? $this->getByType($id, extra: $extra);
+        if ($result !== null || !$required) {
+            return $result;
+        }
+        throw new NotFoundException($id);
     }
 
     public function getByName(?string $name, array $extra = [])
@@ -153,11 +150,12 @@ class Application implements ContainerContract
     protected function parseFile(SplFileInfo $file)
     {
         $class = FileIterator::getClassName($file);
-        //$ref = new ReflectionClass($class);
-        //if (count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0) {
-        $beanDefinition = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
-        $this->beanDefinitions->add($beanDefinition);
-        //}
+        // 先判断有没有这个类的定义解析了， 如果有直接更新， 没有的话才生成
+        $def = $this->beanDefinitions->findDefinitionByClass($class);
+        if ($def === null) {
+            $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
+            $this->beanDefinitions->add($def);
+        }
     }
 
     protected function scanConfig()

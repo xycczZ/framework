@@ -11,6 +11,7 @@ use Xycc\Winter\Container\Exceptions\NotFoundException;
 use Xycc\Winter\Container\Exceptions\PriorityDecidedException;
 use Xycc\Winter\Container\Proxy\ProxyManager;
 use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Scope;
 
 #[Bean('beanManager')]
 class BeanDefinitionCollection
@@ -24,17 +25,19 @@ class BeanDefinitionCollection
 
     public ProxyManager $proxyManager;
 
+    private array $names = [];
+
     public function add(AbstractBeanDefinition $definition)
     {
-        if (isset($this->coll[$definition->getId()])) {
-            throw new DuplicatedIdentityException($definition->getClassName(), $definition->getName());
+        if ($definition->getClassName() !== null && $this->hasClass($definition->getClassName())) {
+            throw new DuplicatedIdentityException($definition->getClassName());
         }
-        $this->coll[$definition->getId()] = $definition;
+        $this->coll[] = $definition;
     }
 
-    public function findDefinitionsByClass(string $class, bool $isBean = true): array
+    public function findDefinitionByClass(string $class, bool $isBean = true): ?AbstractBeanDefinition
     {
-        return $this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getClassName() === $class && (!$isBean || $definition->isBean()));
+        return current($this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getClassName() === $class && (!$isBean || $definition->isBean())));
     }
 
     public function findDefinitionsByType(string $abstract, bool $isBean = true): array
@@ -51,19 +54,27 @@ class BeanDefinitionCollection
             throw new NotFoundException($abstract);
         }
 
-        $primary = array_filter($defs, fn (AbstractBeanDefinition $def) => $def->isPrimary());
+        $beans = [];
+        foreach ($defs as $def) {
+            $names = $def->getNames();
+            foreach ($names as $name => $info) {
+                $beans[] = $info + ['def' => $def, 'name' => $name];
+            }
+        }
+
+        $primary = array_filter($beans, fn (array $info) => $info['primary']);
         if (count($primary) === 1) {
             return current($primary);
         } elseif (count($primary) > 1) {
-            throw new MultiPrimaryException(implode(', ', array_map(fn (AbstractBeanDefinition $def) => $def->getId(), $primary)));
+            throw new MultiPrimaryException(implode(', ', array_map(fn (array $info) => $info['name'], $primary)));
         }
 
-        usort($defs, fn ($a, $b) => $a->getOrder() <=> $b->geOrder());
-        $defs = array_values($defs);
-        if ($defs[0]->getOrder() === $defs[1]->getOrder()) {
-            throw new PriorityDecidedException(implode(', ', array_map(fn ($def) => $def->getId(), array_filter($defs, fn ($def) => $def->getOrder() === $defs[0]->getOrder()))));
+        usort($beans, fn ($a, $b) => $a['order'] <=> $b['order']);
+        $beans = array_values($beans);
+        if ($beans[0]['order'] === $beans[1]['order']) {
+            throw new PriorityDecidedException(implode(', ', array_map(fn ($info) => $info['name'], array_filter($beans, fn ($bean) => $bean['order'] === $beans[0]['order']))));
         }
-        return $defs[0];
+        return $beans[0];
     }
 
     /**
@@ -74,18 +85,9 @@ class BeanDefinitionCollection
         return array_values(array_filter($this->coll, $fn));
     }
 
-    public function findDefinitionById(string $id): ?AbstractBeanDefinition
-    {
-        return current(
-            $this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getId() === $id)
-        ) ?: null;
-    }
-
     public function findDefinitionByName(string $name): ?AbstractBeanDefinition
     {
-        return current(
-            $this->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->getName() === $name)
-        ) ?: null;
+        return $this->names[$name] ?? null;
     }
 
     public function all(): array
@@ -93,9 +95,9 @@ class BeanDefinitionCollection
         return $this->coll;
     }
 
-    public function hasClass(string $class): bool
+    public function hasClass(string $class, bool $isBean = false): bool
     {
-        return count($this->findDefinitionsByClass($class)) > 0;
+        return $this->findDefinitionByClass($class, $isBean) !== null;
     }
 
     public function getClassesByAttr(string $attribute, bool $extends = false, bool $direct = false): array
@@ -155,19 +157,35 @@ class BeanDefinitionCollection
 
     public function clearRequest(int $requestId)
     {
-        $this->coll = array_map(function (AbstractBeanDefinition $def) use ($requestId) {
-            if ($def->isRequest()) {
-                $def->clearRequest($requestId);
+        foreach ($this->coll as $def) {
+            if ($def->isBean()) {
+                foreach ($def->getNames() as $name => $info) {
+                    if ($info['scope'] === Scope::SCOPE_REQUEST) {
+                        $def->clearRequest($requestId, $name);
+                    }
+                }
             }
-            return $def;
-        }, $this->coll);
+        }
     }
 
     public function clearSession(int $sessionId)
     {
-        $this->coll = array_map(function (AbstractBeanDefinition $def) use ($sessionId) {
-            $def->clearSession($sessionId);
-            return $def;
-        }, $this->coll);
+        foreach ($this->coll as $def) {
+            if ($def->isBean()) {
+                foreach ($def->getNames() as $name => $info) {
+                    if ($info['scope'] === Scope::SCOPE_SESSION) {
+                        $def->clearSession($sessionId, $name);
+                    }
+                }
+            }
+        }
+    }
+
+    public function addName(string $name, AbstractBeanDefinition $def)
+    {
+        if (isset($this->names[$name])) {
+            throw new DuplicatedIdentityException($def->getClassName(), [$name]);
+        }
+        $this->names[$name] = $def;
     }
 }

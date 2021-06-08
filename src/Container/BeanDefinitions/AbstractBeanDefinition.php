@@ -5,7 +5,6 @@ namespace Xycc\Winter\Container\BeanDefinitions;
 
 
 use Error;
-use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Pure;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -19,12 +18,15 @@ use SplFileInfo;
 use Swoole\Coroutine;
 use Xycc\Winter\Config\Attributes\Value;
 use Xycc\Winter\Container\BeanDefinitionCollection;
+use Xycc\Winter\Container\Exceptions\DuplicatedIdentityException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
 use Xycc\Winter\Container\Exceptions\MultiPrimaryException;
 use Xycc\Winter\Container\Exceptions\NotFoundException;
 use Xycc\Winter\Container\Exceptions\PriorityDecidedException;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Lazy;
+use Xycc\Winter\Contract\Attributes\Order;
+use Xycc\Winter\Contract\Attributes\Primary;
 use Xycc\Winter\Contract\Attributes\Scope;
 use Xycc\Winter\Contract\Container\BeanDefinitionContract;
 
@@ -34,10 +36,6 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 
     protected BeanDefinitionCollection $manager;
 
-    protected bool $fromConfiguration = false;
-    protected string $configurationId = '';
-    protected string $configurationMethod = '';
-
     protected static array $semi = [];
 
     protected $instance = null;
@@ -45,64 +43,65 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
     protected ?string $proxyClass = null;
 
     protected ?SplFileInfo $fileInfo = null;
-    // bean 的名字
-    protected ?string $name = null;
 
-    public function getInstance(array $extra = [], AbstractBeanDefinition $parent = null, bool $hasType = true): mixed
+    // 一个类可能定义了多个不同名字来引用，可能是方法 bean 中，也可能是本类上直接注解
+    // 实例化针对每一个名字处理， 名字对应的是方法还是本类 映射关系
+    protected array $names = [];
+
+    public function getInstance(array $extra = [], ?string $name = null, AbstractBeanDefinition $parent = null, bool $hasType = true): mixed
     {
-        if (! $this->bean) {
-            throw new NotFoundException($this->className ?: '');
+        if (!isset($this->names[$name])) {
+            throw new NotFoundException($name ?? $this->className);
         }
-        switch ($this->scope) {
+        $info = $this->names[$name];
+
+        switch ($info['scope']) {
             case Scope::SCOPE_SINGLETON:
-                if (!$this->instance) {
-                    $id = $this->getId();
-                    BeanDefinitionCollection::appendSemi($id);
-                    $instance = $this->resolveInstance($extra);
+                if (!isset($this->instance[$name])) {
+                    BeanDefinitionCollection::appendSemi($name ?? $this->className);
+                    $instance = $this->resolveInstance($info, $extra);
                     BeanDefinitionCollection::popSemi();
-                    $this->instance = $instance;
+                    $this->instance[$name] = $instance;
                 }
-                $instance = $this->instance;
+                $instance = $this->instance[$name];
                 break;
             case Scope::SCOPE_SESSION:
-                BeanDefinitionCollection::appendSemi($this->getId());
-                if ($parent !== null && $this->scopeMode === Scope::MODE_PROXY) {
+                BeanDefinitionCollection::appendSemi($name ?? $this->className);
+                if ($parent !== null && $info['scopeMode'] === Scope::MODE_PROXY) {
                     $instance = $this->createProxy($hasType);
                 } elseif ($parent === null) {
-                    if (!isset($this->instance[Coroutine::getContext()['fd']])) {
-                        $instance = $this->resolveInstance($extra);
-                        $this->instance[Coroutine::getContext()['fd']] = $instance;
+                    if (!isset($this->instance[$name][Coroutine::getContext()['fd']])) {
+                        $instance = $this->resolveInstance($info, $extra);
+                        $this->instance[$name][Coroutine::getContext()['fd']] = $instance;
                     }
-                    $instance = $this->instance[Coroutine::getContext()['fd']];
+                    $instance = $this->instance[$name][Coroutine::getContext()['fd']];
                 } else {
-                    $instance = $this->resolveInstance($extra);
+                    $instance = $this->resolveInstance($info, $extra);
                 }
                 BeanDefinitionCollection::popSemi();
                 break;
             case Scope::SCOPE_REQUEST:
-                $id = $this->getId();
-                BeanDefinitionCollection::appendSemi($id);
-                if ($parent !== null && $this->scopeMode === Scope::MODE_PROXY) {
+                BeanDefinitionCollection::appendSemi($name ?? $this->className);
+                if ($parent !== null && $info['scopeMode'] === Scope::MODE_PROXY) {
                     $instance = $this->createProxy($hasType);
                 } elseif ($parent === null) {
-                    if (!isset($this->instance[Coroutine::getContext()['fd']])) {
-                        $instance = $this->resolveInstance($extra);
-                        $this->instance[Coroutine::getContext()['fd']] = $instance;
+                    if (!isset($this->instance[$name][Coroutine::getContext()['fd']])) {
+                        $instance = $this->resolveInstance($info, $extra);
+                        $this->instance[$name][Coroutine::getContext()['fd']] = $instance;
                     } else {
-                        $instance = $this->instance[Coroutine::getContext()['fd']];
+                        $instance = $this->instance[$name][Coroutine::getContext()['fd']];
                     }
                 } else {
-                    $instance = $this->resolveInstance($extra);
+                    $instance = $this->resolveInstance($info, $extra);
                 }
                 BeanDefinitionCollection::popSemi();
                 break;
             case Scope::SCOPE_PROTOTYPE:
-                $id = $this->getId();
-                BeanDefinitionCollection::appendSemi($id);
-                if ($parent !== null && $this->scopeMode === Scope::MODE_PROXY) {
+                BeanDefinitionCollection::appendSemi($name ?? $this->className);
+                if ($parent !== null && $info['scopeMode'] === Scope::MODE_PROXY) {
                     $instance = $this->createProxy($hasType);
                 } else {
-                    $instance = $this->resolveInstance($extra);
+                    $instance = $this->resolveInstance($info, $extra);
                 }
                 BeanDefinitionCollection::popSemi();
                 break;
@@ -135,7 +134,13 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         throw new InvalidBindingException('参数注入的依赖，#[Lazy]或者代理模式的非 Singleton bean， 参数的类型必须是可以继承的类型或者无标注类型');
     }
 
-    protected abstract function resolveInstance(array $extra = []);
+    protected abstract function resolveInstance(array $info, array $extra = []);
+
+    protected function invokeConfiguration(array $info, array $extra = [])
+    {
+        $def = $this->manager->findDefinitionByClass($info['configurationClass']);
+        return $this->invokeMethod($def->getInstance(), $info['configurationMethod'], $extra);
+    }
 
     public function setInstance($instance): static
     {
@@ -143,32 +148,23 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this;
     }
 
-    public function clearSession(int $sessionId)
+    public function clearSession(int $sessionId, ?string $name)
     {
-        if ($this->isSession()) {
-            if (isset($this->instance[$sessionId])) {
-                unset($this->instance[$sessionId]);
-            }
+        if (isset($this->instance[$name][$sessionId])) {
+            unset($this->instance[$name][$sessionId]);
         }
     }
 
-    public function clearRequest(int $requestId)
+    public function clearRequest(int $requestId, ?string $name)
     {
-        if ($this->isRequest()) {
-            if (isset($this->instance[$requestId])) {
-                unset($this->instance[$requestId]);
-            }
+        if (isset($this->instance[$name][$requestId])) {
+            unset($this->instance[$name][$requestId]);
         }
     }
 
     public function isConfiguration(): bool
     {
         return $this->isConfiguration;
-    }
-
-    public function isFromConfiguration(): bool
-    {
-        return $this->fromConfiguration;
     }
 
     public function getClassName(): ?string
@@ -194,87 +190,9 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return count($this->configurationMethods) > 0;
     }
 
-    public function isLazyInit(): bool
+    public function getNames(): array
     {
-        return $this->lazyInit;
-    }
-
-    public function setLazyInit(bool $lazyInit): static
-    {
-        $this->lazyInit = $lazyInit;
-        return $this;
-    }
-
-    #[ExpectedValues(flags: Scope::SCOPES)]
-    public function getScope(): int
-    {
-        return $this->scope;
-    }
-
-    public function setScope(#[ExpectedValues(flags: Scope::SCOPES)] int $scope): static
-    {
-        $this->scope = $scope;
-        return $this;
-    }
-
-
-    public function isPrimary(): bool
-    {
-        return $this->primary;
-    }
-
-    public function setPrimary(bool $isPrimary): static
-    {
-        $this->primary = $isPrimary;
-        return $this;
-    }
-
-    public function getOrder(): int
-    {
-        return $this->order;
-    }
-
-    public function setOrder(int $order): static
-    {
-        $this->order = $order;
-        return $this;
-    }
-
-    #[ExpectedValues(flags: Scope::MODES)]
-    public function getScopeMode(): int
-    {
-        return $this->scopeMode;
-    }
-
-    public function setScopeMode(#[ExpectedValues(flags: Scope::MODES)] int $scopeMode): static
-    {
-        $this->scopeMode = $scopeMode;
-        return $this;
-    }
-
-    public function isPrototype(): bool
-    {
-        return $this->scope === Scope::SCOPE_PROTOTYPE;
-    }
-
-    public function isSingleton(): bool
-    {
-        return $this->scope === Scope::SCOPE_SINGLETON;
-    }
-
-    public function isSession(): bool
-    {
-        return $this->scope === Scope::SCOPE_SESSION;
-    }
-
-    public function isRequest(): bool
-    {
-        return $this->scope === Scope::SCOPE_REQUEST;
-    }
-
-    public function getName(): ?string
-    {
-        return $this->name;
+        return $this->names;
     }
 
     public function getFile(): ?SplFileInfo
@@ -289,7 +207,7 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         $this->refClass = new ReflectionClass($className);
         $this->parseMetadata($this->refClass);
         // if have instance, recreate instance
-        if ($this->instance) {
+        if ($this->instance) { // todo
             $this->instance = null;
         }
     }
@@ -342,11 +260,6 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
             $subClass = $this->className;
         }
         return $parentClass === $subClass || is_subclass_of($subClass, $parentClass);
-    }
-
-    public function getId(): ?string
-    {
-        return $this->name ?: $this->className;
     }
 
     /**
@@ -495,6 +408,9 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
     {
         foreach ($this->refProps as $refProp) {
             $refProp->setAccessible(true);
+            if ($refProp->isInitialized($instance)) {
+                continue;
+            }
             $value = $this->getPropAttrs($refProp->name, Value::class);
             if (count($value) > 0) {
                 $config = $this->manager->findDefinitionById('config')->getInstance();
@@ -518,7 +434,9 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
                     if ($type === null) {
                         throw new InvalidBindingException('Autowired注解必须有name或者type');
                     }
+                    dump('xxx', $type->getName());
                     $value = $this->manager->findHighestPriorityDefinitionByType($type->getName());
+                    dump($value->isBean(), $value->className, $value->getId(), $value::class);
                     $value = $value->getInstance(parent: $this);
                 } else {
                     $value = $this->manager->findDefinitionByName($name)->getInstance(parent: $this, hasType: $refProp->hasType());
@@ -537,5 +455,47 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 
         $args = $this->getMethodArgs($method->getParameters(), $extra);
         return $method->invokeArgs($instance, $args);
+    }
+
+    /// 更新
+    /// 每个类的 bean只可能有一个是没有名字的, 这个没有名字的 bean就是类本身.
+    /// 其他的都必须有名字， 方法 bean 如果没有给名字， 方法名本身就作为名字
+    /// 每个类信息只可能有一个是类本身上注解 Bean 的
+    /// 其他的必须是方法 Bean
+    /// 所以 names 只是所有的方法 bean 的信息
+    /// 本类的信息就存在 BeanDefinition 上
+    /// 如果一个方法 Bean 返回了一个标注了 Configuration 的类， 这个方法会被忽略掉
+    /// 从 Configuration 获取方法 bean 的时候， 总是使用类型获取 Configuration 的实例
+    public function update(ReflectionMethod $method, ?string $name = null)
+    {
+        $name = $name ?: $method->name;
+
+        if (isset($this->names[$name])) {
+            throw new DuplicatedIdentityException($this->className, [$name]);
+        }
+
+        $this->manager->addName($name, $this);
+
+        // 更新方法， 在生成一个 ClassBeanDefinition 对象之前，无论是先扫描到的是方法 bean
+        // 还是先扫描到的类， 都会先通过类加载器获取到文件路径，并且通过反射获取到类的信息
+        $this->names[$name] = $this->updateMethod($method);
+    }
+
+    protected function updateMethod(ReflectionMethod $method)
+    {
+        $def = $this->manager->findDefinitionByClass($method->class);
+        $scope = (current($def->getMethodAttributes($method->name, Scope::class)) ?: null)?->newInstance();
+        $order = current($def->getMethodAttributes($method->name, Order::class)) ?: null;
+        return [
+            'instance' => null,
+            'configurationClass' => $method->class,
+            'configurationMethod' => $method->name,
+            'fromConfiguration' => true,
+            'scope' => $scope?->scope,
+            'scopeMode' => $scope?->scopeMode,
+            'order' => $order?->newInstance()?->vlaue,
+            'primary' => $def->methodHasAttribute($method->name, Primary::class),
+            'lazy' => $this->methodHasAttribute($method->name, Lazy::class),
+        ];
     }
 }

@@ -6,12 +6,11 @@ namespace Xycc\Winter\Contract\Container;
 
 use Psr\Container\ContainerInterface;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
-use Xycc\Winter\Contract\Attributes\Autowired;
 
 
 interface ContainerContract extends ContainerInterface
 {
-    public function get($id, ?string $type = null, int $mode = Autowired::AUTO, bool $required = true, array $extra = []);
+    public function get($id, ?string $type = null, bool $required = true, array $extra = []);
 
     public function has($id): bool;
 
