@@ -13,6 +13,12 @@ use Xycc\Winter\Container\Proxy\ProxyManager;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Scope;
 
+/**
+ * 思路： 在APP下保存所有的注册实例
+ * 每个名字对应一个BeanDefinition， 无论是有类型，无类型的，还是内置类型， 扩展库类型
+ * 如果是类Bean，直接反射构造函数获取实例， 通过fd分隔开每个链接与请求
+ * 如果是方法bean， 获取到方法， 然后执行
+ */
 #[Bean('beanManager')]
 class BeanDefinitionCollection
 {

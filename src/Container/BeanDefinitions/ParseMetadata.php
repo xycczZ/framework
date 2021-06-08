@@ -99,17 +99,6 @@ trait ParseMetadata
             $this->manager->addName($bean?->value, $this);
         }
 
-        $this->names[$bean?->value] = [
-            'instance' => null,
-            'configurationClass' => null,
-            'configurationMethod' => null,
-            'scope' => $scope?->scope,
-            'scopeMode' => $scope?->scopeMode,
-            'order' => $order?->vlaue,
-            'primary' => $primary !== null,
-            'lazy' => $lazy !== null,
-        ];
-
         $this->isConfiguration = !empty(
         array_filter($this->classAttributes,
             fn ($attribute) => $attribute->getName() === Configuration::class)

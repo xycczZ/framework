@@ -15,9 +15,6 @@ class NonTypeBeanDefinition extends AbstractBeanDefinition
     public function __construct(string $name, BeanDefinitionCollection $manager)
     {
         $this->name = $name;
-        //if (isset($this->names[$name])) {
-        //    throw new DuplicatedIdentityException(null, [$name]);
-        //}
         $this->className = null;
         $this->manager = $manager;
         $this->manager->addName($name, $this);

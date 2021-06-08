@@ -20,7 +20,7 @@ trait ParamInfo
      * 获取指定方法的所有 ParameterAttribute
      *
      * @param string $method
-     * @return ReflectionAttribute[]
+     * @return ReflectionAttribute[][]
      */
     public function getAllParameterAttributes(string $method, bool $direct = false): array
     {
