@@ -6,8 +6,6 @@ namespace Xycc\Winter\Container\BeanDefinitions;
 
 use ReflectionClass;
 use ReflectionNamedType;
-use ReflectionUnionType;
-use RuntimeException;
 use SplFileInfo;
 use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Contract\Attributes\Bean;
@@ -22,6 +20,7 @@ class ClassBeanDefinition extends AbstractBeanDefinition
         $this->manager = $manager;
         $this->refClass = new ReflectionClass($this->className);
         $this->parseMetadata($this->refClass);
+        $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isInstantiable();
 
         if ($this->isConfiguration) {
             $this->setUpConfiguration();
@@ -34,9 +33,7 @@ class ClassBeanDefinition extends AbstractBeanDefinition
 
             $returnType = $configurationMethod->getReturnType();
             /**@var ?ReflectionNamedType $returnType */
-            if ($returnType instanceof ReflectionUnionType) {
-                throw new RuntimeException('bean 的类型不能是联合类型');
-            }
+            $returnType = $this->getRefType($returnType);
 
             $bean = $this->getMethodAttributes(
                 $configurationMethod->name, Bean::class, true
@@ -48,11 +45,10 @@ class ClassBeanDefinition extends AbstractBeanDefinition
 
             } elseif ($returnType->isBuiltin()) {
 
-                $definition = $this->manager->findDefinitionsByType($returnType->getName(), false);
+                $definition = $this->manager->findDefinitionByClass($returnType->getName(), false);
                 if ($definition === null) {
                     $definition = new BuiltinBeanDefinition($returnType->getName(), $this->manager);
                 }
-                $definition->update($configurationMethod, $bean->value ?: $configurationMethod->name);
 
             } else {
                 $definition = $this->manager->findDefinitionByClass($returnType->getName());
@@ -64,8 +60,6 @@ class ClassBeanDefinition extends AbstractBeanDefinition
                         $definition = new ExtensionBeanDefinition($returnType->getName(), $this->manager);
                     }
                 }
-                $definition->update($configurationMethod);
-
             }
             $this->manager->add($definition);
         }

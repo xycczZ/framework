@@ -4,16 +4,16 @@
 namespace Xycc\Winter\Container\Proxy;
 
 
-use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
+use Xycc\Winter\Container\Factory\BeanInfo;
 
 
 trait LazyObject
 {
-    private static AbstractBeanDefinition $__DEF__;
+    private static BeanInfo $__BEAN_INFO__;
 
-    public static function __initLazyObject__(AbstractBeanDefinition $definition)
+    public static function __initLazyObject__(BeanInfo $definition)
     {
-        self::$__DEF__ = $definition;
+        self::$__BEAN_INFO__ = $definition;
     }
 
     /**
@@ -22,7 +22,7 @@ trait LazyObject
      */
     public function __callOriginMethodAndReplaceSelf__($method, ...$args)
     {
-        $instance = self::$__DEF__->getInstance();
+        $instance = self::$__BEAN_INFO__->getInstance();
         return $instance->{$method}(...$args);
     }
 }

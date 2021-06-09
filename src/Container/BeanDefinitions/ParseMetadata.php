@@ -12,10 +12,7 @@ use ReflectionProperty;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Configuration;
-use Xycc\Winter\Contract\Attributes\Lazy;
-use Xycc\Winter\Contract\Attributes\Order;
-use Xycc\Winter\Contract\Attributes\Primary;
-use Xycc\Winter\Contract\Attributes\Scope;
+
 
 trait ParseMetadata
 {
@@ -87,29 +84,21 @@ trait ParseMetadata
     {
         $this->classAttributes = $ref->getAttributes();
         $this->allClassAttributes = $this->collectAttributes($this->classAttributes, []);
-        $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class)?->newInstance();
-        $scope = $this->filterFirstAttribute($this->allClassAttributes, Scope::class)?->newInstance();
-        $lazy = $this->filterFirstAttribute($this->allClassAttributes, Lazy::class);
-        $order = $this->filterFirstAttribute($this->allClassAttributes, Order::class)?->newInstance();
-        $primary = $this->filterFirstAttribute($this->allClassAttributes, Primary::class);
 
+        $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class)?->newInstance();
         $this->bean = $bean !== null;
 
-        if ($bean?->value !== null) {
-            $this->manager->addName($bean?->value, $this);
-        }
-
         $this->isConfiguration = !empty(
-        array_filter($this->classAttributes,
+        array_filter($this->allClassAttributes,
             fn ($attribute) => $attribute->getName() === Configuration::class)
         );
     }
 
     // 搜集所有的注解, 每个注解只收集一次
-    private function collectAttributes(array $attributes, array $acc)
+    private function collectAttributes(array $attributes, array $acc): array
     {
         foreach ($attributes as $attribute) {
-            /**@var ReflectionAttribute $attribute*/
+            /**@var ReflectionAttribute $attribute */
             $attributeClass = $attribute->getName();
             if (!isset($acc[$attributeClass]) && class_exists($attributeClass)) {
                 $acc[$attributeClass] = $attribute;

@@ -15,6 +15,7 @@ use Xycc\Winter\Config\Config;
 use Xycc\Winter\Container\{BeanDefinitions\AbstractBeanDefinition,
     BeanDefinitions\ClassBeanDefinition,
     Exceptions\NotFoundException,
+    Factory\BeanFactory,
     Proxy\ProxyManager
 };
 use Xycc\Winter\Contract\{Attributes\Autowired, Attributes\Bean, Bootstrap, Container\ContainerContract};
@@ -35,9 +36,12 @@ class Application implements ContainerContract
 
     private Config $config;
 
+    protected BeanFactory $beanFactory;
+
     public function __construct()
     {
         $this->beanDefinitions = new BeanDefinitionCollection();
+        $this->beanFactory = new BeanFactory();
     }
 
     public function getRootPath(): string
@@ -107,23 +111,23 @@ class Application implements ContainerContract
 
     protected function addPredefinedComponents()
     {
-        $app = new ClassBeanDefinition(static::class, new SplFileInfo(__FILE__), $this->beanDefinitions);
-        $app->setInstance($this);
+        $app = new ClassBeanDefinition(self::class, new SplFileInfo(__FILE__), $this->beanDefinitions);
+        $this->beanFactory->setPredefinedInstance('app', $app, $this);
         $this->beanDefinitions->add($app);
 
         $loader = new ClassLoader($this);
         $loaderDef = new ClassBeanDefinition(ClassLoader::class, new SplFileInfo(__DIR__ . '/ClassLoader.php'), $this->beanDefinitions);
-        $loaderDef->setInstance($loader);
+        $this->beanFactory->setPredefinedInstance(ClassLoader::class, $loaderDef, $loader);
         $this->beanDefinitions->add($loaderDef);
 
         $proxyManager = new ProxyManager($this, $loader);
         $proxy = new ClassBeanDefinition(ProxyManager::class, new SplFileInfo(__DIR__ . '/Proxy/ProxyManager.php'), $this->beanDefinitions);
-        $proxy->setInstance($proxyManager);
+        $this->beanFactory->setPredefinedInstance(ProxyManager::class, $proxy, $proxyManager);
         $this->beanDefinitions->add($proxy);
 
         $definitions = new ClassBeanDefinition(BeanDefinitionCollection::class, new SplFileInfo(__DIR__ . '/BeanDefinitionCollection.php'), $this->beanDefinitions);
-        $definitions->setInstance($this->beanDefinitions);
         $this->beanDefinitions->proxyManager = $proxyManager;
+        $this->beanFactory->setPredefinedInstance('beanManager', $definitions, $this->beanDefinitions);
         $this->beanDefinitions->add($definitions);
     }
 
@@ -155,6 +159,7 @@ class Application implements ContainerContract
         if ($def === null) {
             $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
             $this->beanDefinitions->add($def);
+            $this->beanFactory->addBean($def);
         }
     }
 

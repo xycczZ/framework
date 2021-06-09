@@ -16,9 +16,10 @@ use Xycc\Winter\Container\Application;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\ClassLoader;
 use Xycc\Winter\Container\Exceptions\CannotProxyFinalException;
+use Xycc\Winter\Container\Factory\BeanInfo;
 use Xycc\Winter\Contract\Attributes\Bean;
 
-#[Bean('proxy')]
+#[Bean]
 class ProxyManager
 {
     private Parser $parser;
@@ -33,10 +34,10 @@ class ProxyManager
      *
      * @return object
      */
-    public function generate(AbstractBeanDefinition $def, bool $hasType): object
+    public function generate(BeanInfo $info, AbstractBeanDefinition $def, bool $hasType): object
     {
         // 如果 bean 有📃存在， 且不是 final 类， 则生成代理类
-        if ($def->getFile() !== null && !$def->getRefClass()->isFinal()) {
+        if ($def->getFile() !== null && $def->canProxy()) {
             $object = $this->generateLazyProxy($def->getFile());
         } elseif ($hasType === false) {
             // 否则生成匿名代理类， 原依赖注入处不得有类型标注， 类型会不匹配
@@ -45,7 +46,7 @@ class ProxyManager
             throw new CannotProxyFinalException('不能为扩展里的类、final类生成代理对象，可以考虑去掉类型标注');
         }
         /**@var LazyObject $object */
-        $object::class::__initLazyObject__($def);
+        $object::class::__initLazyObject__($info);
         return $object;
     }
 

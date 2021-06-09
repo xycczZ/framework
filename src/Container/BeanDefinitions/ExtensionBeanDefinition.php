@@ -16,6 +16,7 @@ class ExtensionBeanDefinition extends AbstractBeanDefinition
     {
         $this->className = $className;
         $this->refClass = new ReflectionClass($this->className);
+        $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isFinal();
         $this->manager = $manager;
         $this->parseMetadata($this->refClass);
     }

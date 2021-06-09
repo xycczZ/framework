@@ -6,29 +6,109 @@ namespace Xycc\Winter\Container\Factory;
 
 use JetBrains\PhpStorm\ExpectedValues;
 use RuntimeException;
+use Swoole\Coroutine;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Contract\Attributes\Scope;
 
 class BeanInfo
 {
     public function __construct(
-        public string $name,
-        public int $order,
-        public bool $primary,
-        public bool $lazy,
+        private string $name,
+        private int $order,
+        private bool $primary,
+        private bool $lazy,
         #[ExpectedValues(flags: Scope::SCOPES)]
-        public int $scope,
+        private int $scope,
         #[ExpectedValues(flags: Scope::MODES)]
-        public int $scopeMode,
-        public AbstractBeanDefinition $def,
-        public bool $fromConf,
-        public string $confName = '',
-        public string $confMethod = '',
-        public $instance = null,
+        private int $scopeMode,
+        private AbstractBeanDefinition $def,
+        private bool $fromConf,
+        private string $confName = '',
+        private string $confMethod = '',
+        private mixed $instance = null,
     )
     {
         if ($fromConf && (!$confName || !$confMethod)) {
             throw new RuntimeException('Bean in `Configuration` must set `confName`, `confMethod`');
+        }
+    }
+
+    public function getInstance()
+    {
+        switch ($this->scope) {
+            case Scope::SCOPE_SINGLETON:
+                return $this->instance;
+            case Scope::SCOPE_SESSION:
+            case Scope::SCOPE_REQUEST:
+                return $this->instance[Coroutine::getContext()['fd']];
+            case Scope::SCOPE_PROTOTYPE:
+            default:
+                return null;
+        }
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getOrder(): int
+    {
+        return $this->order;
+    }
+
+    public function isPrimary(): bool
+    {
+        return $this->primary;
+    }
+
+    public function isLazy(): bool
+    {
+        return $this->lazy;
+    }
+
+    public function getScope(): int
+    {
+        return $this->scope;
+    }
+
+    public function getScopeMode(): int
+    {
+        return $this->scopeMode;
+    }
+
+    public function getDef(): AbstractBeanDefinition
+    {
+        return $this->def;
+    }
+
+    public function isFromConf(): bool
+    {
+        return $this->fromConf;
+    }
+
+    public function getConfName(): string
+    {
+        return $this->confName;
+    }
+
+    public function getConfMethod(): string
+    {
+        return $this->confMethod;
+    }
+
+    public function setInstance($instance)
+    {
+        switch ($this->scope) {
+            case Scope::SCOPE_SINGLETON:
+                $this->instance = $instance;
+                break;
+            case Scope::SCOPE_SESSION:
+            case Scope::SCOPE_REQUEST:
+                $this->instance[Coroutine::getContext()['fd']] = $instance;
+                break;
+            default:
+                break;
         }
     }
 }

@@ -10,19 +10,12 @@ use Xycc\Winter\Container\BeanDefinitionCollection;
 
 class NonTypeBeanDefinition extends AbstractBeanDefinition
 {
-    private string $name;
-
     public function __construct(string $name, BeanDefinitionCollection $manager)
     {
-        $this->name = $name;
         $this->className = null;
+        $this->canProxy = true; // 直接生成匿名对象
         $this->manager = $manager;
         $this->manager->addName($name, $this);
-    }
-
-    public function getName()
-    {
-        return $this->name;
     }
 
     final protected function parseMetadata(ReflectionClass $ref): void

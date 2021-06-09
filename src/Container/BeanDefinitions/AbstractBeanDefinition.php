@@ -8,11 +8,13 @@ use JetBrains\PhpStorm\Pure;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
+use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionType;
 use ReflectionUnionType;
 use SplFileInfo;
+use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Container\BeanDefinitionContract;
@@ -21,15 +23,16 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 {
     use ClassInfo, MethodInfo, PropInfo, ParamInfo, ParseMetadata;
 
+    protected BeanDefinitionCollection $manager;
+
+    protected bool $canProxy = false;
+
     protected ?string $proxyClass = null;
 
     protected ?SplFileInfo $fileInfo = null;
 
     protected function createProxy(bool $hasType): object
     {
-        if ($this->proxyClass !== null) {
-            return new $this->proxyClass;
-        }
         // 如果有文件，且类不是 final 类，生成一个代理类
         if (!$this->refClass->isFinal() && $this->fileInfo !== null) {
             $instance = $this->manager->proxyManager->generate($this, true);
@@ -141,10 +144,26 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $parentClass === $subClass || is_subclass_of($subClass, $parentClass);
     }
 
-    protected function assertNotUnionType(ReflectionType $type)
+    protected function getRefType(ReflectionType $type): ?ReflectionNamedType
     {
         if ($type instanceof ReflectionUnionType) {
             throw new InvalidBindingException('The types of beans or autowired objects could not be union type');
         }
+        return $type;
+    }
+
+    public function canProxy(): bool
+    {
+        return $this->canProxy;
+    }
+
+    public function getProxyClass(): ?string
+    {
+        return $this->proxyClass;
+    }
+
+    public function setProxyClass(string $proxyClass)
+    {
+        $this->proxyClass = $proxyClass;
     }
 }

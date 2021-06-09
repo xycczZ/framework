@@ -190,7 +190,7 @@ class BeanDefinitionCollection
     public function addName(string $name, AbstractBeanDefinition $def)
     {
         if (isset($this->names[$name])) {
-            throw new DuplicatedIdentityException($def->getClassName(), [$name]);
+            throw new DuplicatedIdentityException($def->getClassName(), $name);
         }
         $this->names[$name] = $def;
     }

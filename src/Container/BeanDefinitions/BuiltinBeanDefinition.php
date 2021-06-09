@@ -15,7 +15,17 @@ class BuiltinBeanDefinition extends AbstractBeanDefinition
     )
     {
         $this->className = $type;
+        $this->canProxy = $this->isInstantiable($type);
         $this->manager = $manager;
+    }
+
+    protected function isInstantiable(string $type): bool
+    {
+        if (!class_exists($type)) {
+            return false;
+        }
+        $ref = new ReflectionClass($type);
+        return $ref->isInstantiable() && !$ref->isFinal();
     }
 
     final protected function parseMetadata(ReflectionClass $ref): void
