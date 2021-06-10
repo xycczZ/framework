@@ -9,8 +9,7 @@ use Xycc\Winter\Contract\Attributes\Bean;
 #[Attribute(Attribute::TARGET_CLASS)]
 class Controller extends Bean
 {
-    public function __construct(public string $path = '')
+    public function __construct(public ?string $value = null, public string $path = '')
     {
-        parent::__construct();
     }
 }

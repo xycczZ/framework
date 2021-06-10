@@ -31,9 +31,4 @@ class BuiltinBeanDefinition extends AbstractBeanDefinition
     final protected function parseMetadata(ReflectionClass $ref): void
     {
     }
-
-    protected function resolveInstance(array $info, array $extra = [])
-    {
-        return $this->invokeConfiguration($info, $extra);
-    }
 }

@@ -4,16 +4,18 @@
 namespace Xycc\Winter\Container\Proxy;
 
 
-use Xycc\Winter\Container\Factory\BeanInfo;
+use Xycc\Winter\Container\Factory\BeanFactory;
 
 
 trait LazyObject
 {
-    private BeanInfo $__BEAN_INFO__;
+    private string $__BEAN_NAME__;
+    private BeanFactory $__BEAN_FACTORY__;
 
-    public function __SET_BEAN_INFO__(BeanInfo $info)
+    public function __SET_BEAN_INFO__(string $name, BeanFactory $factory)
     {
-        $this->__BEAN_INFO__ = $info;
+        $this->__BEAN_NAME__ = $name;
+        $this->__BEAN_FACTORY__ = $factory;
         return $this;
     }
 
@@ -23,7 +25,7 @@ trait LazyObject
      */
     public function __callOriginMethodAndReplaceSelf__($method, ...$args)
     {
-        $instance = $this->__BEAN_INFO__->getInstance();
+        $instance = $this->__BEAN_FACTORY__->getByName($this->__BEAN_NAME__);
         return $instance->{$method}(...$args);
     }
 }

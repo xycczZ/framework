@@ -47,6 +47,7 @@ class Server extends Command
     private function start(string $action, string $serverName)
     {
         $config = $this->app->get('config');
+        $_ = $config->get('server');
         $serverConfig = $config->get(sprintf('server.%s', $serverName));
 
         switch ($serverName) {

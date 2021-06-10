@@ -41,18 +41,17 @@ class ClassBeanDefinition extends AbstractBeanDefinition
             )[0]->newInstance();
 
             if ($returnType === null) {
-
                 $definition = new NonTypeBeanDefinition($bean->value ?: $configurationMethod->name, $this->manager);
 
             } elseif ($returnType->isBuiltin()) {
 
-                $definition = $this->manager->findDefinitionByClass($returnType->getName(), false);
+                $definition = $this->manager->getDefByClass($returnType->getName());
                 if ($definition === null) {
                     $definition = new BuiltinBeanDefinition($returnType->getName(), $this->manager);
                 }
 
             } else {
-                $definition = $this->manager->findDefinitionByClass($returnType->getName());
+                $definition = $this->manager->getDefByClass($returnType->getName());
                 if ($definition === null) {
                     $class = new ReflectionClass($returnType->getName());
                     if ($class->isUserDefined()) {

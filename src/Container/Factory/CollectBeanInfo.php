@@ -8,6 +8,7 @@ use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionType;
 use ReflectionUnionType;
+use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\Exceptions\DuplicatedIdentityException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
@@ -19,17 +20,19 @@ use Xycc\Winter\Contract\Attributes\Scope;
 
 trait CollectBeanInfo
 {
-    public function addBean(AbstractBeanDefinition $def, ?ReflectionMethod $method = null)
+    protected BeanDefinitionCollection $manager;
+
+    public function addBean(AbstractBeanDefinition $def, ?ReflectionMethod $method = null, ?AbstractBeanDefinition $origin = null)
     {
-        if (null === $method) {
-            $this->addMethodBean($method, $def);
+        if (null !== $method) {
+            $this->addMethodBean($method, $def, $origin);
             return;
         }
 
         $this->addClassBean($def);
     }
 
-    private function addMethodBean(ReflectionMethod $method, AbstractBeanDefinition $conf)
+    private function addMethodBean(ReflectionMethod $method, AbstractBeanDefinition $conf, AbstractBeanDefinition $def)
     {
         $bean = $this->getFirstMethodAttr($conf, $method->name, Bean::class, true);
         if ($bean === null) {
@@ -37,7 +40,7 @@ trait CollectBeanInfo
         }
 
         $type = $this->parseRefType($method->getReturnType());
-        $name = $this->createBeanName($bean, $type?->getName());
+        $name = $bean->value ?: $method->name;
 
         if (isset($this->beans[$name])) {
             throw new DuplicatedIdentityException($conf->getClassName(), $bean->value);
@@ -45,8 +48,8 @@ trait CollectBeanInfo
 
         $info = $this->collectMethodBeanBaseInfo($conf, $method);
 
-        $def = $this->manager->findDefinitionByClass($type?->getname());
-        $this->beans[$name] = new BeanInfo($name, $info['order'], $info['primary'], $info['lazy'], $info['scope'], $info['scopeMode'], $def, true, '', $method->name);
+        // Bean which defined on method maybe have no type, so it have no definitions
+        $this->beans[$name] = new BeanInfo($name, $info['order'], $info['primary'], $info['lazy'], $info['scope'], $info['scopeMode'], $def, true, $conf->getName(), $method->name);
     }
 
     private function getFirstMethodAttr(AbstractBeanDefinition $def, string $method, string $attribute, bool $extends = false)

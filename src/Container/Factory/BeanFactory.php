@@ -17,7 +17,9 @@ use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\Components\AttributeParser;
 use Xycc\Winter\Container\Exceptions\CycleDependencyException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
+use Xycc\Winter\Container\Exceptions\MultiPrimaryException;
 use Xycc\Winter\Container\Exceptions\NotFoundException;
+use Xycc\Winter\Container\Proxy\LazyObject;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Lazy;
@@ -33,9 +35,14 @@ class BeanFactory
      * @var BeanInfo[]
      */
     protected array $beans = [];
-    protected BeanDefinitionCollection $manager;
+
     private static array $dependencyNames = [];
 
+    public function __construct(
+        protected BeanDefinitionCollection $manager
+    )
+    {
+    }
 
     public function get(string $name, ?string $type = null, ?BeanInfo $parent = null)
     {
@@ -77,6 +84,49 @@ class BeanFactory
         throw new NotFoundException($class);
     }
 
+    /**
+     * First look up by name. If not found， search by type.
+     * If only one is found, return the only one.
+     * If more than one is found, return the primary.
+     * If there are multiple eligible types, find the dependency with the same name
+     */
+    protected function getNameType(?string $name, ReflectionProperty|ReflectionParameter $ref, ?BeanInfo $parent = null)
+    {
+        if (isset($this->beans[$name])) {
+            return $this->resolveInstance($this->beans[$name], $parent);
+        }
+
+        if (!$ref->hasType()) {
+            return $this->getByName($ref->name, $parent);
+        }
+
+        $refType = $ref->getType();
+        if ($refType instanceof ReflectionUnionType) {
+            throw new RuntimeException('cannot inject union types, name: ' . $name . ', type: ' . $refType);
+        }
+
+        $infos = $this->searchByType($refType->getName(), true);
+
+        if (count($infos) === 1) {
+            return $this->resolveInstance(current($infos), $parent);
+        } elseif (count($infos) === 0) {
+            throw new NotFoundException($name ?: $ref->getType()->getName());
+        }
+
+        $primary = array_filter($infos, fn (BeanInfo $info) => $info->isPrimary());
+        if (count($primary) === 1) {
+            return $this->resolveInstance(current($primary), $parent);
+        } elseif (count($primary) > 1) {
+            throw new MultiPrimaryException(sprintf('Too many #[Primary]: %s', implode(', ', array_map(fn (BeanInfo $info) => $info->getName(), $primary))));
+        }
+
+        $fitNames = array_filter($infos, fn (BeanInfo $info) => $info->getName() === ($name ?: $ref->name));
+        if (count($fitNames) === 1) {
+            return $this->resolveInstance(current($fitNames), $parent);
+        }
+        throw new NotFoundException('Not found bean: ' . $refType->getName());
+    }
+
     public function has(string $name)
     {
         return isset($this->beans[$name]);
@@ -98,7 +148,7 @@ class BeanFactory
                 // 如果有宿主类型存在，则直接根据代理类型，生成受管理的bean、受宿主管理的bean
                 // 如果宿主类型不存在， 检查缓存
                 if ($parent && $info->getScopeMode() === Scope::MODE_PROXY) {
-                    return $info->getProxyInstance(!!$info->getDef()->getClassName());
+                    return $this->createProxy($info, !!$info->getDef()->getClassName());
                 } elseif ($parent) {
                     $this->checkCycleDependency($info->getName());
                     $instance = $this->createInstance($info);
@@ -114,7 +164,7 @@ class BeanFactory
                 break;
             case Scope::SCOPE_PROTOTYPE:
                 if ($parent && $info->getScopeMode() === Scope::MODE_PROXY) {
-                    return $info->getProxyInstance(!!$info->getDef()->getClassName());
+                    return $this->createProxy($info, !!$info->getDef()->getClassName());
                 } else {
                     $this->checkCycleDependency($info->getName());
                     $instance = $this->createInstance($info);
@@ -127,6 +177,7 @@ class BeanFactory
         array_pop(self::$dependencyNames);
 
         $this->inject($instance, $info);
+        $info->setInstance($instance);
         return $instance;
     }
 
@@ -168,7 +219,7 @@ class BeanFactory
     {
         $args = [];
         foreach ($params as $param) {
-            $required = AttributeParser::getAttribute($param->getAttributes(), Required::class)?->newInstance()?->required;
+            $required = AttributeParser::getAttribute($param->getAttributes(), Required::class)?->newInstance()?->required ?: true;
             $arg = $this->handlePredefinedAttributes($parent, $param, $required);
             if ($arg !== null) {
                 $args[] = $arg;
@@ -265,7 +316,7 @@ class BeanFactory
         if ($info === null) {
             $this->notFountPropOrParam($param);
         }
-        return $info->getProxyInstance($param->hasType());
+        return $this->createProxy($info, $param->hasType());
     }
 
     private function notFountPropOrParam(ReflectionParameter|ReflectionProperty $ref)
@@ -337,6 +388,20 @@ class BeanFactory
         return $result;
     }
 
+    protected function createProxy(BeanInfo $info, bool $haveType)
+    {
+        if ($haveType) {
+            $proxyClass = $info->getDef()->getProxyClass();
+            $object = new $proxyClass;
+        } else {
+            $object = new class {
+                use LazyObject;
+            };
+        }
+
+        return $object->__SET_BEAN_INFO__($info->getName(), $this);
+    }
+
     public function execute($cb, array $extra = [])
     {
         if ($cb instanceof Closure) {
@@ -381,7 +446,7 @@ class BeanFactory
     private function checkCycleDependency(string $name)
     {
         if (in_array($name, self::$dependencyNames)) {
-            throw new CycleDependencyException($name);
+            throw new CycleDependencyException(sprintf('Cycle dependency: %s, consider use #[Lazy]', $name), self::$dependencyNames);
         }
         self::$dependencyNames[] = $name;
     }
@@ -406,7 +471,7 @@ class BeanFactory
         foreach ($props as $prop) {
             /**@var ReflectionProperty $prop */
             $prop->setAccessible(true);
-            $required = AttributeParser::getAttribute($prop->getAttributes(), Required::class)?->newInstance()?->required ?: false;
+            $required = AttributeParser::getAttribute($prop->getAttributes(), Required::class)?->newInstance()?->required ?: true;
             $value = $info->getDef()->getPropAttrs($prop->name, Value::class, true);
             if (count($value) > 0) {
                 $configValue = $this->handleValueAttr($value[0]->newInstance(), $required);
@@ -416,11 +481,13 @@ class BeanFactory
                 }
                 $prop->setValue($instance, $configValue);
             } elseif ($info->getDef()->propHasAttribute($prop->name, Lazy::class, true)) {
-                $lazyInstance = $this->handleLazyAttr($prop);
+                $lazyInstance = $this->handleLazyAttr($prop); // todo same with proxy???
                 $prop->setValue($instance, $lazyInstance);
             } elseif ($autowired = $info->getDef()->getPropAttrs($prop->name, Autowired::class)) {
-                $name = $autowired[0]->newInstance()->value ?: $prop->name;
-                $injected = $this->getByName($name);
+                $autowiredInstance = $autowired[0]->newInstance();
+                $name = $autowiredInstance->value;
+                //$mode = $autowiredInstance->by; // todo inject by mode
+                $injected = $this->getNameType($name, $prop, $info);
                 $prop->setValue($instance, $injected);
             }
         }
@@ -431,6 +498,24 @@ class BeanFactory
         $singleton = array_filter($this->beans, fn (BeanInfo $info) => $info->isSingleton() && !$info->isLazy());
         foreach ($singleton as $item) {
             $this->resolveInstance($item);
+        }
+    }
+
+    public function clearRequest()
+    {
+        foreach ($this->beans as $info) {
+            if ($info->getScope() === Scope::SCOPE_REQUEST) {
+                $info->clearRequest();
+            }
+        }
+    }
+
+    public function clearSession()
+    {
+        foreach ($this->beans as $info) {
+            if ($info->getScope() === Scope::SCOPE_SESSION) {
+                $info->clearSession();
+            }
         }
     }
 }

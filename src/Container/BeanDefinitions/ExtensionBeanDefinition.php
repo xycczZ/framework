@@ -25,20 +25,4 @@ class ExtensionBeanDefinition extends AbstractBeanDefinition
     {
         return null;
     }
-
-    protected function resolveInstance(array $info, array $extra = [])
-    {
-        if ($info['configurationClass'] !== null) {
-            return $this->invokeConfiguration($info, $extra);
-        }
-
-        $constructor = $this->refClass->getConstructor();
-        if ($constructor === null) {
-            return $this->refClass->newInstanceWithoutConstructor();
-        }
-        $params = $constructor->getParameters();
-        $args = $this->getMethodArgs($params, $extra);
-
-        return $this->refClass->newInstanceArgs($args);
-    }
 }

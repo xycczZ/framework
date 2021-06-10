@@ -8,7 +8,6 @@ use JetBrains\PhpStorm\ExpectedValues;
 use RuntimeException;
 use Swoole\Coroutine;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
-use Xycc\Winter\Container\Proxy\LazyObject;
 use Xycc\Winter\Contract\Attributes\Scope;
 
 class BeanInfo
@@ -36,16 +35,11 @@ class BeanInfo
 
     public function getInstance()
     {
-        switch ($this->scope) {
-            case Scope::SCOPE_SINGLETON:
-                return $this->instance;
-            case Scope::SCOPE_SESSION:
-            case Scope::SCOPE_REQUEST:
-                return $this->instance[Coroutine::getContext()['fd']];
-            case Scope::SCOPE_PROTOTYPE:
-            default:
-                return null;
-        }
+        return match ($this->scope) {
+            Scope::SCOPE_SINGLETON => $this->instance,
+            Scope::SCOPE_SESSION, Scope::SCOPE_REQUEST => $this->instance[Coroutine::getContext()['fd']] ?? null,
+            default => null,
+        };
     }
 
     public function getName(): string
@@ -118,23 +112,13 @@ class BeanInfo
         }
     }
 
-    /**
-     * @param bool $haveType 注入的地方有无类型限定
-     *                       生成代理对象
-     *                       如果需要代理类替换的地方是有类型标注的，就只能生成代理类， 如果原来的类型不能继承，则抛出异常
-     *                       如果没有类型标注， 直接返回匿名类代理
-     */
-    public function getProxyInstance(bool $haveType): object
+    public function clearRequest()
     {
-        if ($haveType) {
-            $proxyClass = $this->def->getProxyClass();
-            $object = new $proxyClass;
-        } else {
-            $object = new class {
-                use LazyObject;
-            };
-        }
+        $this->instance[Coroutine::getContext()['fd']] = null;
+    }
 
-        return $object->__SET_BEAN_INFO__($this);
+    public function clearSession()
+    {
+        $this->instance[Coroutine::getContext()['fd']] = null;
     }
 }

@@ -23,20 +23,5 @@ interface ContainerContract extends ContainerInterface
      */
     public function getClassesByAttr(string $attr, bool $extends = false): array;
 
-    /**
-     * @return string[]
-     */
-    public function getMethodsByAttr(string $class, string $attr, bool $extends = false): array;
-
-    /**
-     * @return string[]
-     */
-    public function getPropsByAttr(string $class, string $attr, bool $extends = false): array;
-
-    /**
-     * @return string[]
-     */
-    public function getParamsByAttr(string $class, string $method, string $attr, bool $extends = false): array;
-
     public function execute($action, array $extra = []);
 }

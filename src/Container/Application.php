@@ -3,21 +3,10 @@ declare(strict_types=1);
 
 namespace Xycc\Winter\Container;
 
-use Closure;
-use ReflectionFunction;
-use ReflectionMethod;
-use ReflectionNamedType;
-use ReflectionParameter;
-use ReflectionType;
-use RuntimeException;
 use SplFileInfo;
 use Xycc\Winter\Config\Config;
-use Xycc\Winter\Container\{BeanDefinitions\ClassBeanDefinition,
-    Exceptions\NotFoundException,
-    Factory\BeanFactory,
-    Proxy\ProxyManager
-};
-use Xycc\Winter\Contract\{Attributes\Autowired, Attributes\Bean, Bootstrap, Container\ContainerContract};
+use Xycc\Winter\Container\{BeanDefinitions\ClassBeanDefinition, Factory\BeanFactory, Proxy\ProxyManager};
+use Xycc\Winter\Contract\{Attributes\Bean, Bootstrap, Container\ContainerContract};
 
 
 #[Bean('app')]
@@ -40,7 +29,7 @@ class Application implements ContainerContract
     public function __construct()
     {
         $this->beanDefinitions = new BeanDefinitionCollection();
-        $this->beanFactory = new BeanFactory();
+        $this->beanFactory = new BeanFactory($this->beanDefinitions);
     }
 
     public function getRootPath(): string
@@ -89,8 +78,9 @@ class Application implements ContainerContract
 
         $this->scanPath();
 
-        // 扫描配置
         $this->scanConfig();
+
+        // 扫描配置
         $this->clearProxy();
         $this->clearWeaves();
         $this->collectComponents();
@@ -144,18 +134,18 @@ class Application implements ContainerContract
     {
         $class = FileIterator::getClassName($file);
         // 先判断有没有这个类的定义解析了， 如果有直接更新， 没有的话才生成
-        //$def = $this->beanDefinitions->findDefinitionByClass($class);
-        //if ($def === null) {
-        $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
-        $this->beanDefinitions->add($def);
-        if ($def->isBean()) {
-            $this->beanFactory->addBean($def);
+        $def = $this->beanDefinitions->getDefByClass($class);
+        if ($def === null) {
+            $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
+            $this->beanDefinitions->add($def);
+            if ($def->isBean()) {
+                $this->beanFactory->addBean($def);
+            }
+            $defs = $def->setUpConfiguration();
+            foreach ($defs as ['def' => $definition, 'method' => $method]) {
+                $this->beanFactory->addBean($def, $method, $definition);
+            }
         }
-        $defs = $def->setUpConfiguration();
-        foreach ($defs as ['def' => $def, 'method' => $method]) {
-            $this->beanFactory->addBean($def, $method);
-        }
-        //}
     }
 
     protected function scanConfig()
@@ -239,30 +229,14 @@ class Application implements ContainerContract
         return $this->beanDefinitions->getClassesByAttr($attr, $extends, $direct);
     }
 
-    public function getMethodsByAttr(string $class, string $attr, bool $extends = false, bool $direct = false): array
+    public function clearRequest()
     {
-        return $this->beanDefinitions->getMethodsByAttr($class, $attr, $extends, $direct);
+        $this->beanFactory->clearRequest();
     }
 
-    public function getPropsByAttr(string $class, string $attr, bool $extends = false, bool $direct = false): array
+    public function clearSession()
     {
-        return $this->beanDefinitions->getPropsByAttr($class, $attr, $extends, $direct);
-    }
-
-    public function getParamsByAttr(string $class, string $method, string $attr, bool $extends = false, bool $direct = false): array
-    {
-        return $this->beanDefinitions->getParamsByAttr($class, $method, $attr, $extends, $direct);
-    }
-
-    // todo
-    public function clearRequest(int $id)
-    {
-        $this->beanDefinitions->clearRequest($id);
-    }
-
-    public function clearSession(int $id)
-    {
-        $this->beanDefinitions->clearSession($id);
+        $this->beanFactory->clearSession();
     }
 
     public static function postAutoloadDump($event)
@@ -302,96 +276,9 @@ HERE
         file_put_contents($path, ';', FILE_APPEND);
     }
 
-    /**
-     * @param ReflectionParameter[] $params
-     */
-    protected function getMethodArgs(array $params, array $extra = [])
-    {
-        $args = [];
-
-        foreach ($params as $param) {
-            $autowired = $param->getAttributes(Autowired::class);
-            if (count($autowired) > 0) {
-                $name = $autowired[0]->newInstance()->value;
-                if ($name === null) {
-                    $type = $param->getType();
-                    if ($type === null) {
-                        throw new NotFoundException(message: sprintf('autowired注解需要名字或者类型标注: %s::%s(%s)', $param->getDeclaringClass()->name, $param->getDeclaringFunction()->name, $param->name));
-                    }
-                    $this->assertNotUnionType($type);
-                    $arg = $this->beanDefinitions->findHighestPriorityDefinitionByType($type->getName())->getInstance();
-                } else {
-                    $arg = $this->beanDefinitions->findDefinitionByName($name)->getInstance();
-                }
-                $args[] = $arg;
-                continue;
-            }
-
-            if (isset($extra[$param->name])) {
-                if ($param->hasType()) {
-                    $type = $param->getType();
-                    $this->assertNotUnionType($type);
-                    $args[] = convert_extra_type($type->getName(), $extra[$param->name]);
-                } else {
-                    $args[] = $extra[$param->name];
-                }
-                continue;
-            }
-
-            if ($param->isDefaultValueAvailable()) {
-                $args[] = $param->getDefaultValue();
-                continue;
-            }
-
-            // 按类型注入
-            if ($param->hasType()) {
-                $type = $param->getType();
-                $this->assertNotUnionType($type);
-                $args[] = $this->beanDefinitions->findHighestPriorityDefinitionByType($type->getName())->getInstance();
-            }
-        }
-
-        return $args;
-    }
-
-    private function assertNotUnionType(ReflectionType $type)
-    {
-        if (!($type instanceof ReflectionNamedType)) {
-            throw new RuntimeException('只能注入命名类型');
-        }
-    }
-
-    protected function executeAction(string $class, string $method, array $extra = [])
-    {
-        $def = $this->beanDefinitions->findHighestPriorityDefinitionByType($class);
-        return $def->invokeMethod($def->getInstance(), $method, $extra);
-    }
-
-    protected function executeClosure(callable $handler, array $extra = [])
-    {
-        $ref = new ReflectionFunction($handler);
-        $args = $this->getMethodArgs($ref->getParameters(), $extra);
-        return $handler(...$args);
-    }
-
-    protected function executeActionObject($object, string $method, array $extra = [])
-    {
-        $refMethod = new ReflectionMethod($object, $method);
-        $args = $this->getMethodArgs($refMethod->getParameters(), $extra);
-        return $object->{$method}(...$args);
-    }
-
     public function execute($action, array $extra = [])
     {
-        if ($action instanceof Closure) {
-            return $this->executeClosure($action, $extra);
-        } elseif (is_array($action)) {
-            if (is_string($action[0])) {
-                return $this->executeAction($action[0], $action[1], $extra);
-            }
-            return $this->executeActionObject($action[0], $action[1], $extra);
-        }
-        throw new RuntimeException('需要传入函数或者数组形式的回调函数');
+        return $this->beanFactory->execute($action, $extra);
     }
 
     public function clearProxy()

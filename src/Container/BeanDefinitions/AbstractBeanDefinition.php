@@ -136,7 +136,7 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $parentClass === $subClass || is_subclass_of($subClass, $parentClass);
     }
 
-    protected function getRefType(ReflectionType $type): ?ReflectionNamedType
+    protected function getRefType(?ReflectionType $type): ?ReflectionNamedType
     {
         if ($type instanceof ReflectionUnionType) {
             throw new InvalidBindingException('The types of beans or autowired objects could not be union type');
