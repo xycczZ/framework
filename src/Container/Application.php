@@ -12,8 +12,7 @@ use ReflectionType;
 use RuntimeException;
 use SplFileInfo;
 use Xycc\Winter\Config\Config;
-use Xycc\Winter\Container\{BeanDefinitions\AbstractBeanDefinition,
-    BeanDefinitions\ClassBeanDefinition,
+use Xycc\Winter\Container\{BeanDefinitions\ClassBeanDefinition,
     Exceptions\NotFoundException,
     Factory\BeanFactory,
     Proxy\ProxyManager
@@ -50,23 +49,14 @@ class Application implements ContainerContract
     }
 
     // string $id
-    public function get($id, ?string $type = null, bool $required = true, array $extra = [])
+    public function get($id, ?string $type = null)
     {
-        $result = $this->getByName($id, extra: $extra) ?? $this->getByType($id, extra: $extra);
-        if ($result !== null || !$required) {
-            return $result;
-        }
-        throw new NotFoundException($id);
+        return $this->beanFactory->get($id, $type);
     }
 
-    public function getByName(?string $name, array $extra = [])
+    public function getByName(string $name)
     {
-        if (!$name) {
-            return null;
-        }
-
-        $def = $this->beanDefinitions->findDefinitionByName($name);
-        return $def?->getInstance($extra);
+        return $this->beanFactory->getByName($name);
     }
 
     public function getEnv()
@@ -74,15 +64,14 @@ class Application implements ContainerContract
         return $_ENV['winter_app.env'];
     }
 
-    public function getByType(string $class, array $extra = [])
+    public function getByType(string $class)
     {
-        $def = $this->beanDefinitions->findHighestPriorityDefinitionByType($class);
-        return $def->getInstance($extra);
+        return $this->beanFactory->getByType($class);
     }
 
     public function has($id): bool
     {
-        return count($this->beanDefinitions->filterDefinitions(fn ($def) => $def->getId() === $id)) > 0;
+        return $this->beanFactory->has($id);
     }
 
     public function getPath(string $path = ''): string
@@ -155,12 +144,18 @@ class Application implements ContainerContract
     {
         $class = FileIterator::getClassName($file);
         // 先判断有没有这个类的定义解析了， 如果有直接更新， 没有的话才生成
-        $def = $this->beanDefinitions->findDefinitionByClass($class);
-        if ($def === null) {
-            $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
-            $this->beanDefinitions->add($def);
+        //$def = $this->beanDefinitions->findDefinitionByClass($class);
+        //if ($def === null) {
+        $def = new ClassBeanDefinition($class, $file, $this->beanDefinitions);
+        $this->beanDefinitions->add($def);
+        if ($def->isBean()) {
             $this->beanFactory->addBean($def);
         }
+        $defs = $def->setUpConfiguration();
+        foreach ($defs as ['def' => $def, 'method' => $method]) {
+            $this->beanFactory->addBean($def, $method);
+        }
+        //}
     }
 
     protected function scanConfig()
@@ -203,11 +198,7 @@ class Application implements ContainerContract
      */
     protected function collectComponents()
     {
-        $definitions = $this->beanDefinitions->filterDefinitions(fn (AbstractBeanDefinition $definition) => $definition->isBean() && $definition->isSingleton() && !$definition->isLazyInit());
-
-        foreach ($definitions as $definition) {
-            $definition->getInstance();
-        }
+        $this->beanFactory->start();
     }
 
     public function publishFiles(string $filePath, string $toPath = ''): bool
@@ -263,6 +254,7 @@ class Application implements ContainerContract
         return $this->beanDefinitions->getParamsByAttr($class, $method, $attr, $extends, $direct);
     }
 
+    // todo
     public function clearRequest(int $id)
     {
         $this->beanDefinitions->clearRequest($id);

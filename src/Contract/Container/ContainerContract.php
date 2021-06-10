@@ -10,7 +10,7 @@ use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 
 interface ContainerContract extends ContainerInterface
 {
-    public function get($id, ?string $type = null, bool $required = true, array $extra = []);
+    public function get($id, ?string $type = null);
 
     public function has($id): bool;
 

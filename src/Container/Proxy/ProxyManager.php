@@ -11,12 +11,15 @@ use PhpParser\NodeTraverser;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionNamedType;
+use ReflectionUnionType;
 use RuntimeException;
 use Xycc\Winter\Container\Application;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\ClassLoader;
 use Xycc\Winter\Container\Exceptions\CannotProxyFinalException;
-use Xycc\Winter\Container\Factory\BeanInfo;
 use Xycc\Winter\Contract\Attributes\Bean;
 
 #[Bean]
@@ -30,24 +33,20 @@ class ProxyManager
     }
 
     /**
-     * 生成id或者type的代理对象
+     * 生成代理类
+     * 原类是可以继承的则生成代理类
+     * 否则返回null，自行生成匿名类
      *
-     * @return object
+     * @return ?string
      */
-    public function generate(BeanInfo $info, AbstractBeanDefinition $def, bool $hasType): object
+    public function generate(AbstractBeanDefinition $def): ?string
     {
         // 如果 bean 有📃存在， 且不是 final 类， 则生成代理类
-        if ($def->getFile() !== null && $def->canProxy()) {
-            $object = $this->generateLazyProxy($def->getFile());
-        } elseif ($hasType === false) {
-            // 否则生成匿名代理类， 原依赖注入处不得有类型标注， 类型会不匹配
-            $object = $this->generateClosureProxy();
+        if ($def->canProxy()) {
+            return $def->getFile() ? $this->generateLazyProxy($def->getFile()) : $this->generateExtensionProxy($def->getClassName());
         } else {
-            throw new CannotProxyFinalException('不能为扩展里的类、final类生成代理对象，可以考虑去掉类型标注');
+            throw new CannotProxyFinalException('不能为final类生成代理对象，可以考虑去掉类型标注');
         }
-        /**@var LazyObject $object */
-        $object::class::__initLazyObject__($info);
-        return $object;
     }
 
     protected function getNs($ast): ?Namespace_
@@ -66,7 +65,7 @@ class ProxyManager
         return $class->name->name;
     }
 
-    protected function generateLazyProxy(string $filePath): object
+    protected function generateLazyProxy(string $filePath): string
     {
         try {
             $ast = $this->parser->parse(file_get_contents($filePath));
@@ -84,27 +83,80 @@ class ProxyManager
             $fileName = $path . '/' . $className . '.php';
             file_put_contents($fileName, $code);
             $this->registerAutoload($fileName, $className);
-            return new $className();
+            return $className;
         } catch (Error $error) {
             throw new RuntimeException($error->getMessage());
         }
+    }
+
+    protected function generateExtensionProxy(string $class)
+    {
+        $ref = new ReflectionClass($class);
+        $methods = $ref->getMethods(ReflectionMethod::IS_PUBLIC);
+        $methods = array_filter($methods, fn (ReflectionMethod $method) => !$method->isFinal() && !$method->isStatic());
+
+        $className = $class . uniqid('__proxy_ext__');
+
+        $methodStubs = [];
+        foreach ($methods as $method) {
+            $methodStubs[] = $this->prepareMethod($method);
+        }
+
+        $content = implode('', $methodStubs);
+        $fileContent = <<<FILE
+namespace {
+    class $className
+    {
+    $content
+    } 
+}
+FILE;
+        $path = $this->app->getPath('runtime/proxy');
+        if (!is_dir($path)) {
+            mkdir($path, 0777, true);
+        }
+        $fileName = $path . '/' . $className . '.php';
+        file_put_contents($fileName, $fileContent);
+        $this->registerAutoload($fileName, $className);
+        return $className;
+    }
+
+    protected function prepareMethod(ReflectionMethod $method)
+    {
+        $args = [];
+        $argNames = [];
+        foreach ($method->getParameters() as $parameter) {
+            $argNames[] = '$' . $parameter->name;
+            $typeStub = '';
+            if ($parameter->hasType()) {
+                $type = $parameter->getType();
+                if ($type instanceof ReflectionUnionType) {
+                    $argType = array_map(fn (ReflectionNamedType $t) => $t->getName(), $type->getTypes());
+                } else {
+                    $argType = $type->getName();
+                }
+                $typeStub = implode('|', $argType) . ' ';
+            }
+
+            $args[] = sprintf('%s$%s', $typeStub, $parameter->name);
+        }
+
+        $arg = implode(', ', $args);
+        $argName = implode(', ', $argNames);
+
+        return <<<METHOD
+    public function $method->name($arg)
+    {
+        return \$this->__callOriginMethodAndReplaceSelf__('$method->name', $argName);
+    }
+
+METHOD;
+
     }
 
     private function registerAutoload(string $filePath, string $className)
     {
         $this->loader->addClassMap([$className => $filePath]);
         $this->loader->register();
-    }
-
-    /**
-     * 闭包没有类型继承，直接返回一个匿名类
-     *
-     * @return object
-     */
-    protected function generateClosureProxy(): object
-    {
-        return new class {
-            use LazyObject;
-        };
     }
 }

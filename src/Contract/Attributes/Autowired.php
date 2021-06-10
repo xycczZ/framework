@@ -8,9 +8,13 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_METHOD | Attribute::TARGET_PROPERTY)]
 final class Autowired
 {
+    public const AUTO = 0;
+    public const BY_TYPE = 1;
+    public const BY_NAME = 2;
+
     public function __construct(
         public ?string $value = null,
-        public bool $required = true)
+        public int $by = self::AUTO)
     {
     }
 }

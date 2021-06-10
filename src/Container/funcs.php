@@ -21,7 +21,7 @@ if (!function_exists('first')) {
     {
         $result = array_filter($arr, $fn, ARRAY_FILTER_USE_BOTH);
         reset($result);
-        return current($result);
+        return current($result) ?: null;
     }
 }
 

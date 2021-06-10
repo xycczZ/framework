@@ -9,11 +9,12 @@ use Xycc\Winter\Container\Factory\BeanInfo;
 
 trait LazyObject
 {
-    private static BeanInfo $__BEAN_INFO__;
+    private BeanInfo $__BEAN_INFO__;
 
-    public static function __initLazyObject__(BeanInfo $definition)
+    public function __SET_BEAN_INFO__(BeanInfo $info)
     {
-        self::$__BEAN_INFO__ = $definition;
+        $this->__BEAN_INFO__ = $info;
+        return $this;
     }
 
     /**
@@ -22,7 +23,7 @@ trait LazyObject
      */
     public function __callOriginMethodAndReplaceSelf__($method, ...$args)
     {
-        $instance = self::$__BEAN_INFO__->getInstance();
+        $instance = $this->__BEAN_INFO__->getInstance();
         return $instance->{$method}(...$args);
     }
 }

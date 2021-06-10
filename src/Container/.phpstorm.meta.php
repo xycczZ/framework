@@ -13,4 +13,7 @@ namespace PHPSTORM_META {
         '' => '@',
         'config' => \Xycc\Winter\Contract\Config\ConfigContract::class,
     ]));
+    override(\Xycc\Winter\Container\Factory\BeanFactory::getByName(0), map([
+        'config' => \Xycc\Winter\Contract\Config\ConfigContract::class,
+    ]));
 }

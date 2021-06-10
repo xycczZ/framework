@@ -20,15 +20,16 @@ class ClassBeanDefinition extends AbstractBeanDefinition
         $this->manager = $manager;
         $this->refClass = new ReflectionClass($this->className);
         $this->parseMetadata($this->refClass);
-        $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isInstantiable();
-
-        if ($this->isConfiguration) {
-            $this->setUpConfiguration();
-        }
+        $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isFinal();
     }
 
-    protected function setUpConfiguration()
+    public function setUpConfiguration(): array
     {
+        if (!$this->isConfiguration) {
+            return [];
+        }
+
+        $defs = [];
         foreach ($this->configurationMethods as $configurationMethod) {
 
             $returnType = $configurationMethod->getReturnType();
@@ -61,7 +62,10 @@ class ClassBeanDefinition extends AbstractBeanDefinition
                     }
                 }
             }
+            $defs[] = ['def' => $definition, 'method' => $configurationMethod];
             $this->manager->add($definition);
         }
+
+        return $defs;
     }
 }

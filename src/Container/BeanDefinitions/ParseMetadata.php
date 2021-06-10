@@ -9,6 +9,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
+use Xycc\Winter\Container\Components\AttributeParser;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Configuration;
@@ -83,7 +84,7 @@ trait ParseMetadata
     protected function handleClassAttrs(ReflectionClass $ref): void
     {
         $this->classAttributes = $ref->getAttributes();
-        $this->allClassAttributes = $this->collectAttributes($this->classAttributes, []);
+        $this->allClassAttributes = AttributeParser::collectAttributes($this->classAttributes);
 
         $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class)?->newInstance();
         $this->bean = $bean !== null;
@@ -94,26 +95,11 @@ trait ParseMetadata
         );
     }
 
-    // 搜集所有的注解, 每个注解只收集一次
-    private function collectAttributes(array $attributes, array $acc): array
-    {
-        foreach ($attributes as $attribute) {
-            /**@var ReflectionAttribute $attribute */
-            $attributeClass = $attribute->getName();
-            if (!isset($acc[$attributeClass]) && class_exists($attributeClass)) {
-                $acc[$attributeClass] = $attribute;
-                $attrs = (new ReflectionClass($attributeClass))->getAttributes();
-                $acc = $this->collectAttributes($attrs, $acc);
-            }
-        }
-        return $acc;
-    }
-
     protected function handlePropAttrs(ReflectionProperty $property)
     {
         $attributes = $property->getAttributes();
         $this->propertyAttributes[$property->getName()] = $attributes;
-        $this->allPropertyAttributes[$property->getName()] = $this->collectAttributes($attributes, []);
+        $this->allPropertyAttributes[$property->getName()] = AttributeParser::collectAttributes($attributes);
     }
 
     // 魔术方法是否要过滤掉
@@ -121,7 +107,7 @@ trait ParseMetadata
     {
         $attributes = $method->getAttributes();
         $this->methodAttributes[$method->getName()] = $attributes;
-        $this->allMethodAttributes[$method->getName()] = $this->collectAttributes($attributes, []);
+        $this->allMethodAttributes[$method->getName()] = AttributeParser::collectAttributes($attributes);
 
         if ($this->isConfiguration) {
             if ($this->methodHasAttribute($method->name, Bean::class, true)) {
@@ -159,7 +145,7 @@ trait ParseMetadata
     {
         $attributes = $parameter->getAttributes();
         $this->paramAttributes[$method->getName()][$parameter->getName()] = $attributes;
-        $this->allParamAttributes[$method->getName()][$parameter->getName()] = $this->collectAttributes($attributes, []);
+        $this->allParamAttributes[$method->getName()][$parameter->getName()] = AttributeParser::collectAttributes($attributes);
     }
 
     public function isBean(): bool

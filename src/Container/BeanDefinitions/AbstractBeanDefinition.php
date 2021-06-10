@@ -31,27 +31,19 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
 
     protected ?SplFileInfo $fileInfo = null;
 
-    protected function createProxy(bool $hasType): object
+    protected function createProxy(): string
     {
-        // 如果有文件，且类不是 final 类，生成一个代理类
-        if (!$this->refClass->isFinal() && $this->fileInfo !== null) {
-            $instance = $this->manager->proxyManager->generate($this, true);
-            $this->proxyClass = $instance::class;
-            return $instance;
-        }
-        // 否则判断当前是否有类型标识，如果没有类型标识， 可以生成一个代理类
-        if (!$hasType) {
-            $instance = $this->manager->proxyManager->generate($this, false);
-            $this->proxyClass = $instance::class;
-            return $instance;
-        }
-        // 如果有类型标识，且没有文件可以生成，抛出异常
-        throw new InvalidBindingException('参数注入的依赖，#[Lazy]或者代理模式的非 Singleton bean， 参数的类型必须是可以继承的类型或者无标注类型');
+        return $this->manager->proxyManager->generate($this);
     }
 
     public function isConfiguration(): bool
     {
         return $this->isConfiguration;
+    }
+
+    public function setUpConfiguration(): array
+    {
+        return [];
     }
 
     public function getClassName(): ?string
@@ -157,13 +149,11 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this->canProxy;
     }
 
-    public function getProxyClass(): ?string
+    public function getProxyClass(): string
     {
-        return $this->proxyClass;
-    }
-
-    public function setProxyClass(string $proxyClass)
-    {
-        $this->proxyClass = $proxyClass;
+        if ($this->proxyClass) {
+            return $this->proxyClass;
+        }
+        return $this->proxyClass = $this->createProxy();
     }
 }
