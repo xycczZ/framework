@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Xycc\Winter\Route;
 
 
-use ReflectionAttribute;
-use ReflectionClass;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Contract\Bootstrap;
 use Xycc\Winter\Contract\Container\ContainerContract;
@@ -41,14 +39,12 @@ class RouterBoot extends Bootstrap
 
     private function getRoutes(AbstractBeanDefinition $controller): array
     {
-        $controllerClass = $controller->getClassName();
-        $refController = new ReflectionClass($controllerClass);
-        $controllerAttr = $refController->getAttributes(Controller::class, ReflectionAttribute::IS_INSTANCEOF);
+        $controllerAttr = $controller->getClassAttributes(Controller::class, true);
         $path = $controllerAttr[0]->newInstance()->path;
-        $routes = $this->app->getMethodsByAttr($controllerClass, Route::class, true);
+        $routes = $controller->getMethods(Route::class, true);
         $result = [];
         foreach ($routes as $route) {
-            $method = $refController->getMethod($route)->getAttributes(Route::class, ReflectionAttribute::IS_INSTANCEOF);
+            $method = $controller->getMethodAttributes($route, Route::class, true);
             $attr = $method[0]->newInstance();
             $result[] = [
                 'method' => $attr->method,

@@ -33,9 +33,9 @@ class AspectBoot extends Bootstrap
         // 遍历所有切面类
         foreach ($aspects as $aspect) {
             // 获取到此切面类的切点方法
-            $pointcuts = $container->getMethodsByAttr($aspect->getClassName(), Pointcut::class);
+            $pointcuts = $aspect->getMethods(Pointcut::class);
             // 获取到此切面类的通知方法
-            $advises = $container->getMethodsByAttr($aspect->getClassName(), Advise::class, true);
+            $advises = $aspect->getMethods(Advise::class, true);
             $refClass = $aspect->getRefClass();
 
             // 遍历切点
@@ -69,12 +69,8 @@ class AspectBoot extends Bootstrap
             foreach ($advises as $advise) {
                 $refMethod = $aspect->getRefMethod($advise);
                 $attr = $refMethod->getAttributes(Advise::class, ReflectionAttribute::IS_INSTANCEOF)[0]->newInstance();
-                $instance = $aspect->getInstance();
-                if ($attr instanceof Around) {
-                    $closure = fn (...$args) => $instance->{$advise}(...$args);
-                } else {
-                    $closure = fn (...$args) => $instance->{$advise}(...$args);
-                }
+                $instance = $container->get($aspect->getName());
+                $closure = fn (...$args) => $instance->{$advise}(...$args);
                 $processors[$aspect->getClassName()][$advise] = match ($attr::class) {
                     Before::class => new BeforeProcessor($closure),
                     After::class => new AfterProcessor($closure),

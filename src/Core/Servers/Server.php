@@ -5,20 +5,23 @@ namespace Xycc\Winter\Core\Servers;
 
 use Closure;
 use Exception;
+use JetBrains\PhpStorm\ArrayShape;
 use Monolog\Logger;
 use Swoole\Coroutine;
 use Swoole\Http\Request as SwooleRequest;
 use Swoole\Http\Response as SwooleResponse;
-use Swoole\Http\Server;
 use Swoole\Process;
 use Swoole\Server\Event;
 use Swoole\Server\Task;
 use Swoole\Server\TaskResult;
+use Swoole\WebSocket\Server as SwooleServer;
 use Xycc\Winter\Container\Application;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Config\ConfigContract;
 use Xycc\Winter\Core\CoreBoot;
 use Xycc\Winter\Core\Events\OnRequest;
+use Xycc\Winter\Core\SerializedRequest;
 use Xycc\Winter\Event\EventDispatcher;
 use Xycc\Winter\Http\ExceptionManager;
 use Xycc\Winter\Http\MiddlewareManager;
@@ -27,10 +30,10 @@ use Xycc\Winter\Http\Response\Response;
 use Xycc\Winter\Route\Router;
 
 
-#[Bean]
-class HttpServer
+#[Component, NoProxy]
+class Server
 {
-    private Server $server;
+    private SwooleServer $server;
     private array $settings = [];
 
     public function __construct(
@@ -51,7 +54,7 @@ class HttpServer
     public function start(array $serverConfig)
     {
         $this->settings = $serverConfig;
-        $server = new Server($serverConfig['host'], $serverConfig['port']);
+        $server = new SwooleServer($serverConfig['host'], $serverConfig['port']);
         if (isset($serverConfig['settings']['log_file'])) {
             if (!is_dir(dirname($serverConfig['settings']['log_file']))) {
                 mkdir(dirname($serverConfig['settings']['log_file']));
@@ -69,6 +72,7 @@ class HttpServer
         $server->on('managerStart', [$this, 'onManagerStart']);
         $server->on('task', [$this, 'onTask']);
         $server->on('finish', [$this, 'onFinish']);
+        $server->on('message', fn () => true);
 
         $this->server = $server;
         foreach (CoreBoot::getProcesses() as $process) {
@@ -92,7 +96,7 @@ class HttpServer
         $this->start($config);
     }
 
-    public function onStart(Server $server)
+    public function onStart(SwooleServer $server)
     {
         $name = $this->settings['name'] ?? $this->config->get('app.name');
         @swoole_set_process_name(sprintf('%s: master', $name ?: 'winter'));
@@ -100,19 +104,19 @@ class HttpServer
         echo sprintf('http server start on http://%s:%s' . PHP_EOL, $server->host, $server->port);
     }
 
-    public function onManagerStart(Server $server)
+    public function onManagerStart(SwooleServer $server)
     {
         $name = $this->settings['name'] ?? $this->config->get('app.name');
         @swoole_set_process_name(sprintf('%s: manager', $name ?: 'winter'));
     }
 
-    public function onShutdown(Server $server)
+    public function onShutdown(SwooleServer $server)
     {
         $this->app->clearProxy();
         $this->app->clearWeaves();
     }
 
-    public function onWorkerStart(Server $server, int $workerId)
+    public function onWorkerStart(SwooleServer $server, int $workerId)
     {
         $name = $this->settings['name'] ?? $this->config->get('app.name');
 
@@ -125,14 +129,14 @@ class HttpServer
         }
     }
 
-    public function onTask(Server $server, Task $task)
+    public function onTask(SwooleServer $server, Task $task)
     {
         $data = $task->data;
         switch ($data['type']) {
             case 'listener':
                 foreach ($data['listeners'] as $listener) {
                     $this->app->execute([$listener, 'handle'], ['event' => $data['event']]);
-                    if ($data['event']->isPropagationStopped()) {
+                    if (method_exists($data['event'], 'isPropagationStopped') && $data['event']->isPropagationStopped()) {
                         return;
                     }
                 }
@@ -143,22 +147,22 @@ class HttpServer
         }
     }
 
-    public function onFinish(Server $server, TaskResult $result)
+    public function onFinish(SwooleServer $server, TaskResult $result)
     {
 
     }
 
-    protected function taskStart(Server $server, int $workerId)
+    protected function taskStart(SwooleServer $server, int $workerId)
     {
     }
 
-    protected function workerStart(Server $server, int $workerId)
+    protected function workerStart(SwooleServer $server, int $workerId)
     {
     }
 
-    public function onClose(Server $server, Event $event)
+    public function onClose(SwooleServer $server, Event $event)
     {
-        $this->app->clearSession($event->fd);
+        $this->app->clearSession();
     }
 
     public function onRequest(SwooleRequest $request, SwooleResponse $response)
@@ -168,7 +172,7 @@ class HttpServer
             return;
         }
 
-        $this->dispatcher->dispatch(new OnRequest($request));
+        $this->dispatcher->dispatch(new OnRequest(SerializedRequest::fromRequest($request)));
 
         Coroutine::getContext()['fd'] = $request->fd;
 
@@ -190,7 +194,7 @@ class HttpServer
             $this->em->catchStatus($e);
             $resp = $this->app->get(Response::class);
             if (!$resp->getContent()) {
-                $resp->setContent(['error' => 'Internal Error']);
+                $resp->setContent(['trace' => $e->getTrace(), 'msg' => $e->getMessage()]);
             }
             $resp->send();
             return;
@@ -202,10 +206,8 @@ class HttpServer
         $this->app->clearRequest();
     }
 
-    /**
-     * @return array<Request, Response>
-     */
-    protected function prepareReqResp(SwooleRequest $request, SwooleResponse $response)
+    #[ArrayShape([0 => Request::class, 1 => Response::class])]
+    protected function prepareReqResp(SwooleRequest $request, SwooleResponse $response): array
     {
         $req = $this->app->get(Request::class);
         $resp = $this->app->get(Response::class);
@@ -245,6 +247,7 @@ class HttpServer
                 return $resp;
             }
             $response = $this->app->get(Response::class);
+            $response->setStatusCode($resp ? 200 : 204);
             return $response->setContent($resp ?: '');
         };
     }

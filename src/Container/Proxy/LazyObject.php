@@ -4,25 +4,28 @@
 namespace Xycc\Winter\Container\Proxy;
 
 
-use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
+use Xycc\Winter\Container\Factory\BeanFactory;
 
 
 trait LazyObject
 {
-    private static AbstractBeanDefinition $__DEF__;
+    private string $__BEAN_NAME__;
+    private BeanFactory $__BEAN_FACTORY__;
 
-    public static function __initLazyObject__(AbstractBeanDefinition $definition)
+    public function __SET_BEAN_INFO__(string $name, BeanFactory $factory)
     {
-        self::$__DEF__ = $definition;
+        $this->__BEAN_NAME__ = $name;
+        $this->__BEAN_FACTORY__ = $factory;
+        return $this;
     }
 
     /**
      * 判断是否有对象存在，有对象存在就直接调用对象的方法
      * 如果没有对象存在，就创建一个新的
      */
-    public function __callOriginMethodAndReplaceSelf__($method, ...$args)
+    public function __callOriginMethod__($method, ...$args)
     {
-        $instance = self::$__DEF__->getInstance();
+        $instance = $this->__BEAN_FACTORY__->get($this->__BEAN_NAME__);
         return $instance->{$method}(...$args);
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Xycc\Winter\Event;
 
 
+use Xycc\Winter\Container\BeanDefinitionCollection;
+use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Contract\Bootstrap;
 use Xycc\Winter\Contract\Container\ContainerContract;
 use Xycc\Winter\Event\Attributes\Event;

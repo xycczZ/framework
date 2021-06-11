@@ -14,15 +14,18 @@ trait ParamInfo
     /**@var ReflectionParameter[][] 方法参数的反射实例 */
     protected array $refParams = [];
 
+    protected array $allParamAttributes = [];
+
     /**
      * 获取指定方法的所有 ParameterAttribute
      *
      * @param string $method
-     * @return ReflectionAttribute[]
+     * @return ReflectionAttribute[][]
      */
-    public function getAllParameterAttributes(string $method): array
+    public function getAllParameterAttributes(string $method, bool $direct = false): array
     {
-        return $this->paramAttributes[$method] ?? [];
+        $prop = $direct ? 'paramAttributes' : 'allParamAttributes';
+        return $this->{$prop}[$method] ?? [];
     }
 
     /**
@@ -30,10 +33,12 @@ trait ParamInfo
      *
      * @return ReflectionAttribute[]
      */
-    public function getParameterAttributes(string $method, string|int|null $param = null): array
+    public function getParameterAttributes(string $method, string|int|null $param = null, bool $direct = false): array
     {
+        $prop = $direct ? 'paramAttributes' : 'allParamAttributes';
+
         if ($param === null) {
-            return $this->paramAttributes[$method];
+            return $this->{$prop}[$method];
         }
 
         if (is_int($param)) {
@@ -42,7 +47,7 @@ trait ParamInfo
             $name = $param;
         }
 
-        return $this->paramAttributes[$method][$name] ?? [];
+        return $this->{$prop}[$method][$name] ?? [];
     }
 
     private function convertPositionToName(string $method, int $position): ?string
@@ -59,10 +64,10 @@ trait ParamInfo
      * @param bool   $extends
      * @return string[]
      */
-    public function getParams(string $method, string $attribute, bool $extends = false): array
+    public function getParams(string $method, string $attribute, bool $extends = false, bool $direct = false): array
     {
         $params = $this->getMethodParamNames($method);
-        return array_filter($params, fn (string $param) => $this->paramHasAttribute($method, $param, $attribute, $extends));
+        return array_filter($params, fn (string $param) => $this->paramHasAttribute($method, $param, $attribute, $extends, $direct));
     }
 
     /**
@@ -86,9 +91,9 @@ trait ParamInfo
      * @return bool
      */
     public function paramHasAttribute(string $method, string|int $paramNameOrIndex,
-                                      string $attribute, bool $extends = false): bool
+                                      string $attribute, bool $extends = false, bool $direct = false): bool
     {
-        return count($this->getParamAttrs($method, $paramNameOrIndex, $attribute, $extends)) > 0;
+        return count($this->getParamAttrs($method, $paramNameOrIndex, $attribute, $extends, $direct)) > 0;
     }
 
     /**
@@ -101,11 +106,12 @@ trait ParamInfo
      * @return ReflectionAttribute[]
      */
     public function getParamAttrs(string $method, string|int $paramNameOrIndex,
-                                  string $attribute, bool $extends = false): array
+                                  string $attribute, bool $extends = false, bool $direct = false): array
     {
         $name = $this->convertPositionToName($method, $paramNameOrIndex);
 
-        $paramAttrs = $this->paramAttributes[$method][$name] ?? [];
+        $prop = $direct ? 'paramAttributes' : 'allParamAttributes';
+        $paramAttrs = $this->{$prop}[$method][$name] ?? [];
 
         if (count($paramAttrs) < 1) {
             return [];

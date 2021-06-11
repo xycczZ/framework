@@ -12,18 +12,12 @@ class NonTypeBeanDefinition extends AbstractBeanDefinition
 {
     public function __construct(string $name, BeanDefinitionCollection $manager)
     {
-        $this->name = $name;
         $this->className = null;
+        $this->canProxy = true; // 直接生成匿名对象
         $this->manager = $manager;
     }
 
     final protected function parseMetadata(ReflectionClass $ref): void
     {
-    }
-
-    protected function resolveInstance(array $extra = [])
-    {
-        $configuration = $this->manager->findDefinitionById($this->configurationId);
-        return $this->invokeMethod($configuration->getInstance(), $this->configurationMethod, $extra);
     }
 }

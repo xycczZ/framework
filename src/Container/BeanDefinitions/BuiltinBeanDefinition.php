@@ -10,23 +10,25 @@ use Xycc\Winter\Container\BeanDefinitionCollection;
 class BuiltinBeanDefinition extends AbstractBeanDefinition
 {
     public function __construct(
-        string $name,
         string $type,
         BeanDefinitionCollection $manager,
     )
     {
-        $this->name = $name;
         $this->className = $type;
+        $this->canProxy = $this->isInstantiable($type);
         $this->manager = $manager;
+    }
+
+    protected function isInstantiable(string $type): bool
+    {
+        if (!class_exists($type)) {
+            return false;
+        }
+        $ref = new ReflectionClass($type);
+        return $ref->isInstantiable() && !$ref->isFinal();
     }
 
     final protected function parseMetadata(ReflectionClass $ref): void
     {
-    }
-
-    protected function resolveInstance(array $extra = [])
-    {
-        $configuration = $this->manager->findDefinitionById($this->configurationId);
-        return $this->invokeMethod($configuration->getInstance(), $this->configurationMethod, $extra);
     }
 }

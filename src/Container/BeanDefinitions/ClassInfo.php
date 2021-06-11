@@ -10,6 +10,8 @@ trait ClassInfo
     /**@var ReflectionAttribute[] attributes of current class */
     protected array $classAttributes = [];
 
+    protected array $allClassAttributes = [];
+
     // bean 的类型，对于`ClassBeanDefinition`是类名
     // 对于`NonTypeBeanDefinition`是 null
     // 对于`BuiltinBeanDefinition`是内置类型名称
@@ -20,9 +22,9 @@ trait ClassInfo
     /**
      * @return ReflectionAttribute[]
      */
-    public function getAllClassAttributes(): array
+    public function getAllClassAttributes(bool $direct = false): array
     {
-        return $this->classAttributes;
+        return $direct ? $this->classAttributes : $this->allClassAttributes;
     }
 
     /**
@@ -32,9 +34,9 @@ trait ClassInfo
      * @param bool   $extends
      * @return bool
      */
-    public function classHasAttribute(string $attribute, bool $extends = false): bool
+    public function classHasAttribute(string $attribute, bool $extends = false, bool $direct = false): bool
     {
-        return count($this->getClassAttributes($attribute, $extends)) > 0;
+        return count($this->getClassAttributes($attribute, $extends, $direct)) > 0;
     }
 
     /**
@@ -44,8 +46,8 @@ trait ClassInfo
      * @param bool   $extends   determines whether need to search for subclasses
      * @return ReflectionAttribute[]
      */
-    public function getClassAttributes(string $attribute, bool $extends = false): array
+    public function getClassAttributes(string $attribute, bool $extends = false, bool $direct = false): array
     {
-        return $this->filterAttribute($this->classAttributes, $attribute, $extends);
+        return $this->filterAttribute($direct ? $this->classAttributes : $this->allClassAttributes, $attribute, $extends);
     }
 }

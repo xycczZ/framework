@@ -1,12 +1,19 @@
 <?php
 namespace PHPSTORM_META {
-    registerArgumentsSet('event',
-        'start', 'shutdown', 'workerStart', 'workerStop', 'workerExit', 'connect', 'receive', 'request',
+    registerArgumentsSet('tcpEvent',
+         'connect', 'receive' , 'start', 'shutdown', 'workerStart', 'workerStop', 'workerExit',
         'packet', 'close', 'task', 'finish', 'pipeMessage', 'workerError', 'managerStart',
         'managetStop', 'beforeReload', 'afterReload'
     );
-    expectedArguments(\Swoole\Http\Server::on(), 0, argumentsSet('event'));
-    expectedArguments(\Swoole\Process\Pool::on(), 0, argumentsSet('event'));
+    registerArgumentsSet('httpEvent', 'request', 'start', 'shutdown', 'workerStart', 'workerStop', 'workerExit',
+        'packet', 'close', 'task', 'finish', 'pipeMessage', 'workerError', 'managerStart',
+        'managetStop', 'beforeReload', 'afterReload');
+    registerArgumentsSet('wsEvent', 'connect', 'receive', 'handshake', 'open', 'message', 'request', 'start', 'shutdown', 'workerStart', 'workerStop', 'workerExit',
+        'packet', 'close', 'task', 'finish', 'pipeMessage', 'workerError', 'managerStart',
+        'managetStop', 'beforeReload', 'afterReload');
+    expectedArguments(\Swoole\WebSocket\Server::on(), 0, argumentsSet('wsEvent'));
+    expectedArguments(\Swoole\Http\Server::on(), 0, argumentsSet('httpEvent'));
+    expectedArguments(\Swoole\Process\Pool::on(), 0, argumentsSet('tcpEvent'));
 
     override(\Swoole\Process\Pool::getProcess(0), map([
         '' => \Swoole\Process::class,

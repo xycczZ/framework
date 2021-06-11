@@ -5,8 +5,10 @@ namespace Xycc\Winter\Aspect\Factories;
 
 
 use PhpParser\Node;
+use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use Xycc\Winter\Contract\Attributes\Autowired;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 class MethodVisitor extends NameResolver
 {
@@ -31,6 +33,8 @@ class MethodVisitor extends NameResolver
                 $node->extends = new Node\Name($oldClass);
             }
 
+            $node->attrGroups[] = new Node\AttributeGroup([new Node\Attribute(new Node\Name('\\' . NoProxy::class))]);
+
             $node->name->name .= uniqid('__weaving__proxy__');
             $node->flags = Node\Stmt\Class_::MODIFIER_FINAL;
 
@@ -44,7 +48,7 @@ class MethodVisitor extends NameResolver
                 new Node\Name('\\' . ProxyFactory::class),
                 [new Node\AttributeGroup([new Node\Attribute(new Node\Name('\\' . Autowired::class))])]
             );
-        } elseif ($node instanceof Node\Stmt\ClassMethod && in_array($node->name->name, $this->weavingMethods)) {
+        } elseif ($node instanceof Node\Stmt\ClassMethod && in_array($node->name->name, $this->weavingMethods) && !$node->isFinal() && !$node->isStatic()) {
             if ($node->returnType instanceof Node\Name && count($node->returnType?->parts ?: []) === 1 && strtolower($node->returnType?->parts[0]) === 'self') {
                 $node->returnType = new Node\Name('parent', $node->returnType->getAttributes());
             }
@@ -82,6 +86,10 @@ class MethodVisitor extends NameResolver
                     )
                 ),
             ];
+        } elseif ($node instanceof Node\Stmt\Property) {
+            return NodeTraverser::REMOVE_NODE;
         }
+
+        return $node;
     }
 }

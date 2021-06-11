@@ -4,13 +4,11 @@
 namespace Xycc\Winter\Aspect\Attributes;
 
 use Attribute;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-final class Aspect extends Bean
+#[NoProxy]
+final class Aspect extends Component
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
 }

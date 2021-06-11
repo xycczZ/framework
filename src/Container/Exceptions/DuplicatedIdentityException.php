@@ -9,9 +9,9 @@ use Throwable;
 
 class DuplicatedIdentityException extends RuntimeException
 {
-    public function __construct(?string $type, ?string $name, $message = '', $code = 0, Throwable $previous = null)
+    public function __construct(?string $type, ?string $name = null, $code = 0, Throwable $previous = null)
     {
-        $message .= 'type: ' . ($type ?: 'null') . ', name: ' . ($name ?: 'null');
+        $message = sprintf('Bean 名字冲突 %s', $type ?? $name);
         parent::__construct($message, $code, $previous);
     }
 }

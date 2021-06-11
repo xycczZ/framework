@@ -5,11 +5,12 @@ namespace Xycc\Winter\Http;
 
 use Exception;
 use Xycc\Winter\Contract\Attributes\Autowired;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Container\ContainerContract;
 use Xycc\Winter\Http\Response\Response;
 
-#[Bean]
+#[Component, NoProxy]
 class ExceptionManager
 {
     #[Autowired]

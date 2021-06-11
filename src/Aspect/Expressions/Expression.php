@@ -43,11 +43,21 @@ class Expression
 
     public function matchAccess(string|int $access): bool
     {
+        if (is_int($access)) {
+            if ($access & ReflectionMethod::IS_PUBLIC) {
+                $access = 'public';
+            } elseif ($access & ReflectionMethod::IS_PROTECTED) {
+                $access = 'protected';
+            } elseif ($access & ReflectionMethod::IS_PRIVATE) {
+                $access = 'private';
+            }
+        }
+
         $access = match ($access) {
-            ReflectionMethod::IS_PUBLIC => 'public',
-            ReflectionMethod::IS_PROTECTED => 'protected',
-            ReflectionMethod::IS_PRIVATE => 'private',
-            'public' | 'protected' | 'private' => $access,
+            //ReflectionMethod::IS_PUBLIC => 'public',
+            //ReflectionMethod::IS_PROTECTED => 'protected',
+            //ReflectionMethod::IS_PRIVATE => 'private',
+            'public', 'protected', 'private' => $access,
             default => throw new InvalidExpressionException('访问修饰符只能是[public|protected|private]')
         };
 
@@ -88,29 +98,34 @@ class Expression
         // 通配
         if ($rest === '*') {
             $this->all = true;
-            return ;
+            return;
         }
 
         [$acc, $rest] = explode(' ', $rest, 2);
         $this->accessExpr->parse($acc);
 
         // 类名
-        if (str_contains($rest, '::')) {
-            [$nsAndClass, $rest] = explode('::', $rest);
-            $this->classExpr->parse($nsAndClass);
-        }
+        $nsClassRest = explode('::', $rest);
+        $nsAndClass = $nsClassRest[0];
+        $rest = $nsClassRest[1] ?? '*';
+        $this->classExpr->parse($nsAndClass);
 
         // 方法
-        if (str_contains($rest, '(') && str_contains($rest, ')')) {
-            [$methodName, $rest] = explode('(', $rest);
-            [$params, $rest] = explode(')', $rest);
-            $this->methodExpr->parse($methodName. '%' . $params);
-        }
+        $methodNameRest = explode('(', $rest, 2);
+        $methodName = $methodNameRest[0];
+        $rest = $methodNameRest[1] ?? '*';
+
+        $paramsRest = explode(')', $rest, 2);
+        $params = $paramsRest[0];
+        $rest = $paramsRest[1] ?? '*';
+        $this->methodExpr->parse($methodName . '%' . $params);
 
         // 返回值
-        if (str_contains($rest, ':')) {
-            [, $return] = explode(':', $rest);
-            $this->returnTypeExpr->parse($return);
+        if ($rest === '*') {
+            $this->returnTypeExpr->parse('*');
+        } else {
+            $return = explode(':', $rest);
+            $this->returnTypeExpr->parse($return[1] ?? '*');
         }
     }
 }

@@ -5,13 +5,14 @@ namespace Xycc\Winter\Http\Request;
 
 use Swoole\Http\Request as SwooleRequest;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Attributes\Scope;
 
 /**
  * @mixin SymfonyRequest
  */
-#[Bean]
+#[Component, NoProxy]
 #[Scope(Scope::SCOPE_REQUEST, Scope::MODE_PROXY)]
 class Request
 {

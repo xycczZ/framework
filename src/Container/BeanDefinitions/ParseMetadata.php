@@ -4,19 +4,17 @@ declare(strict_types=1);
 namespace Xycc\Winter\Container\BeanDefinitions;
 
 
-use JetBrains\PhpStorm\ExpectedValues;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
+use Xycc\Winter\Container\Components\AttributeParser;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Configuration;
-use Xycc\Winter\Contract\Attributes\Lazy;
-use Xycc\Winter\Contract\Attributes\Order;
-use Xycc\Winter\Contract\Attributes\Primary;
-use Xycc\Winter\Contract\Attributes\Scope;
+
 
 trait ParseMetadata
 {
@@ -27,13 +25,7 @@ trait ParseMetadata
     /**@var ReflectionMethod[] setter 方法 */
     protected array $setters = [];
 
-    #[ExpectedValues(flags: Scope::SCOPES)]
-    protected int $scope;
-    #[ExpectedValues(flags: Scope::MODES)]
-    protected int $scopeMode;
-    protected bool $lazyInit;
-    protected int $order;
-    protected bool $primary;
+    protected bool $bean = false;
 
     // 类的反射实例
     protected ReflectionClass $refClass;
@@ -44,14 +36,19 @@ trait ParseMetadata
     /**@var ReflectionParameter[][] 方法参数的反射实例 */
     protected array $refParams = [];
 
-    /**@var ReflectionAttribute[] 类的注解数组 */
+    /**@var ReflectionAttribute[] 类的直接注解数组 */
     protected array $classAttributes = [];
-    /**@var ReflectionAttribute[][] 方法的注解数组 */
+    /**@var ReflectionAttribute[][] 方法的直接注解数组 */
     protected array $methodAttributes = [];
-    /**@var ReflectionAttribute[][] 属性的注解数组 */
+    /**@var ReflectionAttribute[][] 属性的直接注解数组 */
     protected array $propertyAttributes = [];
-    /**@var ReflectionAttribute[][][] 方法参数的注解数组 */
+    /**@var ReflectionAttribute[][][] 方法参数的直接注解数组 */
     protected array $paramAttributes = [];
+
+    protected array $allClassAttributes = [];
+    protected array $allMethodAttributes = [];
+    protected array $allPropertyAttributes = [];
+    protected array $allParamAttributes = [];
 
     protected function parseMetadata(ReflectionClass $ref): void
     {
@@ -75,42 +72,46 @@ trait ParseMetadata
         }
     }
 
+    protected function filterFirstAttribute(array $attributes, string $attr, bool $extends = true): ?ReflectionAttribute
+    {
+        return current(array_filter(
+            $attributes,
+            fn (ReflectionAttribute $attribute) => $extends
+                ? $this->isSameOrSubClassOf($attr, $attribute->getName())
+                : $attr === $attribute->getName()
+        )) ?: null;
+    }
+
     protected function handleClassAttrs(ReflectionClass $ref): void
     {
         $this->classAttributes = $ref->getAttributes();
-        $beans = $ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF);
-        $bean = (current($beans) ?: null)?->newInstance();
-        $scope = (current($ref->getAttributes(Scope::class)) ?: null)?->newInstance();
-        $lazy = count($ref->getAttributes(Lazy::class)) > 0;
-        $order = (current($ref->getAttributes(Order::class)) ?: null)?->newInstance();
-        $primary = count($ref->getAttributes(Primary::class)) > 0;
+        $this->allClassAttributes = AttributeParser::collectAttributes($this->classAttributes);
 
-        $this->primary = $primary;
-        $this->order = $order?->value ?: Order::DEFAULT;
-        $this->scope = $scope?->scope ?: Scope::SCOPE_SINGLETON;
-        $this->scopeMode = $scope?->mode ?: Scope::MODE_DEFAULT;
-        $this->lazyInit = $lazy ?: false;
-        $this->name = $bean?->value ?: null;
+        $bean = $this->filterFirstAttribute($this->allClassAttributes, Component::class)?->newInstance();
+        $this->bean = $bean !== null;
 
         $this->isConfiguration = !empty(
-        array_filter($this->classAttributes,
+        array_filter($this->allClassAttributes,
             fn ($attribute) => $attribute->getName() === Configuration::class)
         );
     }
 
     protected function handlePropAttrs(ReflectionProperty $property)
     {
-        $this->propertyAttributes[$property->getName()] = $property->getAttributes();
+        $attributes = $property->getAttributes();
+        $this->propertyAttributes[$property->getName()] = $attributes;
+        $this->allPropertyAttributes[$property->getName()] = AttributeParser::collectAttributes($attributes);
     }
 
     // 魔术方法是否要过滤掉
     protected function handleMethodAttrs(ReflectionMethod $method)
     {
-        $this->methodAttributes[$method->getName()] = $method->getAttributes();
+        $attributes = $method->getAttributes();
+        $this->methodAttributes[$method->getName()] = $attributes;
+        $this->allMethodAttributes[$method->getName()] = AttributeParser::collectAttributes($attributes);
 
         if ($this->isConfiguration) {
-            $beans = $method->getAttributes(Bean::class);
-            if (count($beans) > 0) {
+            if ($this->methodHasAttribute($method->name, Bean::class, true)) {
                 $this->configurationMethods[] = $method;
             }
         }
@@ -143,6 +144,13 @@ trait ParseMetadata
 
     protected function handleParamAttrs(ReflectionMethod $method, ReflectionParameter $parameter)
     {
-        $this->paramAttributes[$method->getName()][$parameter->getName()] = $parameter;
+        $attributes = $parameter->getAttributes();
+        $this->paramAttributes[$method->getName()][$parameter->getName()] = $attributes;
+        $this->allParamAttributes[$method->getName()][$parameter->getName()] = AttributeParser::collectAttributes($attributes);
+    }
+
+    public function isBean(): bool
+    {
+        return $this->bean;
     }
 }

@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Xycc\Winter\Container;
 
 
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 /**
  * @mixin \Composer\Autoload\ClassLoader
  */
-#[Bean]
+#[Component]
+#[NoProxy]
 class ClassLoader
 {
     private $loader;

@@ -15,17 +15,19 @@ use PhpParser\PrettyPrinter\Standard;
 use ReflectionMethod;
 use RuntimeException;
 use SplFileInfo;
-use Xycc\Winter\Aspect\Attributes\Aspect;
 use Xycc\Winter\Aspect\Expressions\Expression;
 use Xycc\Winter\Aspect\Processors\ProxyProcessor;
 use Xycc\Winter\Container\Application;
 use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\ClassLoader;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Container\Factory\BeanFactory;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 
-#[Bean]
+#[Component]
+#[NoProxy]
 class ProxyFactory
 {
     private array $pointcutAdviseMap;
@@ -37,6 +39,7 @@ class ProxyFactory
         private Application $app,
         private BeanDefinitionCollection $collection,
         private ClassLoader $loader,
+        private BeanFactory $factory,
     )
     {
         $this->parser = (new ParserFactory())->create(ParserFactory::ONLY_PHP7);
@@ -60,14 +63,16 @@ class ProxyFactory
 
     protected function collectBeanProcessors()
     {
-        // 有类型的， 非Final的， 可以实例化的才可以切入
+        // 属于被容器管理的依赖， 有文件存在， 不能是以下几个注解标注过的: Aspect, NoProxy, Primary, Configuration
+        // 要有类型，不能是不可实例化的， 不能是不可继承的
         $defs = $this->collection->filterDefinitions(
-            fn (AbstractBeanDefinition $def) => $def->getFile() !== null &&
-                !$def->classHasAttribute(Aspect::class) &&
+            fn (AbstractBeanDefinition $def) => $def->isBean() &&
+                $def->getFile() !== null &&
                 $def->getClassName() !== null &&
                 !$def->getRefClass()->isFinal() &&
                 $def->getRefClass()->isInstantiable() &&
-                !$def->getRefClass()->isAnonymous()
+                !$def->getRefClass()->isAnonymous() &&
+                !$def->classHasAttribute(NoProxy::class)
         );
 
         foreach ($this->pointcutAdviseMap as $expression => $aspectIdAndAdvises) {
@@ -76,7 +81,7 @@ class ProxyFactory
             if ($expr->isMatchAll()) {
                 foreach ($defs as $def) {
                     foreach ($def->getRefMethod() as $refMethod) {
-                        $this->insertProcessorMap($def->getId(), $refMethod->name, $this->collectProcessors($aspectIdAndAdvises, $refMethod));
+                        $this->insertProcessorMap($def->getClassName(), $refMethod->name, $this->collectProcessors($aspectIdAndAdvises, $refMethod));
                     }
                 }
                 continue;
@@ -87,7 +92,7 @@ class ProxyFactory
                 foreach ($def->getRefMethod() as $refMethod) {
                     /**@var ReflectionMethod $refMethod */
                     if ($expr->matchAccess($refMethod->getModifiers()) && $expr->matchMethod($refMethod) && $expr->matchReturnType($refMethod->getReturnType())) {
-                        $this->insertProcessorMap($def->getId(), $refMethod->name, $this->collectProcessors($aspectIdAndAdvises, $refMethod));
+                        $this->insertProcessorMap($def->getClassName(), $refMethod->name, $this->collectProcessors($aspectIdAndAdvises, $refMethod));
                     }
                 }
             }
@@ -111,7 +116,7 @@ class ProxyFactory
         ), $aspectIdAndAdvises);
         $result = [];
         foreach ($data as $value) {
-            $result = array_merge($result, $value);
+            $result = [...$result, ...$value];
         }
         return $result;
     }
@@ -127,7 +132,7 @@ class ProxyFactory
     public function proxy()
     {
         foreach ($this->processorMap as $id => $data) {
-            $def = $this->collection->findDefinitionById($id);
+            $def = $this->collection->getDefByClass($id);
             $methods = array_keys($data);
             $this->generateProxy($def, $methods);
         }
@@ -142,12 +147,13 @@ class ProxyFactory
     protected function generateProxy(AbstractBeanDefinition $def, array $methods)
     {
         $file = $def->getFile();
+        $originClass = $def->getClassName();
         try {
             $ast = $this->parser->parse(file_get_contents($file->getRealPath()));
             $traverser = new NodeTraverser();
             $visitor = new MethodVisitor();
             $visitor->weavingMethods = $methods;
-            $visitor->id = $def->getId();
+            $visitor->id = $def->getClassName();
             $traverser->addVisitor($visitor);
             $ast = $traverser->traverse($ast);
 
@@ -165,8 +171,8 @@ class ProxyFactory
             file_put_contents($fileName, $code);
             $this->loader->addClassMap([$fqn => $fileName]);
             $this->loader->register();
-
             $def->reload(new SplFileInfo($fileName), $fqn);
+            $this->factory->reload($def, $originClass);
         } catch (Error $error) {
             throw new RuntimeException($error->getMessage());
         }

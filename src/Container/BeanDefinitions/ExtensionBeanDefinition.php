@@ -16,6 +16,7 @@ class ExtensionBeanDefinition extends AbstractBeanDefinition
     {
         $this->className = $className;
         $this->refClass = new ReflectionClass($this->className);
+        $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isFinal();
         $this->manager = $manager;
         $this->parseMetadata($this->refClass);
     }
@@ -23,22 +24,5 @@ class ExtensionBeanDefinition extends AbstractBeanDefinition
     public function getFile(): ?SplFileInfo
     {
         return null;
-    }
-
-    protected function resolveInstance(array $extra = [])
-    {
-        if ($this->isFromConfiguration()) {
-            $configuration = $this->manager->findDefinitionById($this->configurationId);
-            return $this->invokeMethod($configuration->getInstance(), $this->configurationMethod);
-        }
-
-        $constructor = $this->refClass->getConstructor();
-        if ($constructor === null) {
-            return $this->refClass->newInstanceWithoutConstructor();
-        }
-        $params = $constructor->getParameters();
-        $args = $this->getMethodArgs($params, $extra);
-
-        return $this->refClass->newInstanceArgs($args);
     }
 }

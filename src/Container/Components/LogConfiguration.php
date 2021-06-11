@@ -10,7 +10,6 @@ use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Configuration;
 use Xycc\Winter\Contract\Attributes\Lazy;
-use Xycc\Winter\Contract\Attributes\Primary;
 use Xycc\Winter\Contract\Config\ConfigContract;
 
 #[Configuration]
@@ -19,7 +18,7 @@ class LogConfiguration
     #[Autowired]
     private ConfigContract $config;
 
-    #[Bean, Lazy, Primary]
+    #[Bean, Lazy]
     public function defaultLogger(): Logger
     {
         $handler = new StreamHandler($this->config->get('app.runtime') . '/logs/app.log', 1);

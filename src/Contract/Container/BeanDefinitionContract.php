@@ -4,13 +4,11 @@ declare(strict_types=1);
 namespace Xycc\Winter\Contract\Container;
 
 
-use JetBrains\PhpStorm\ExpectedValues;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
 use SplFileInfo;
-use Xycc\Winter\Contract\Attributes\Scope;
 
 
 interface BeanDefinitionContract extends ClassInfoContract, MethodInfoContract, PropInfoContract, ParamInfoContract
@@ -43,17 +41,6 @@ interface BeanDefinitionContract extends ClassInfoContract, MethodInfoContract, 
      *  获取类所在文件的信息
      */
     public function getFile(): ?SplFileInfo;
-
-    /**
-     *  是否需要延迟解析
-     */
-    public function isLazyInit(): bool;
-
-    /**
-     * 此 bean 的作用域
-     */
-    #[ExpectedValues(flags: Scope::SCOPES)]
-    public function getScope(): int;
 
     public function getRefClass(): ReflectionClass;
 

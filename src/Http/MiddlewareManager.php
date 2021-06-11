@@ -4,9 +4,11 @@
 namespace Xycc\Winter\Http;
 
 
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
-#[Bean]
+#[Component]
+#[NoProxy]
 class MiddlewareManager
 {
     private array $customMiddlewares = [];

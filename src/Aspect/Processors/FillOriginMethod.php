@@ -14,8 +14,11 @@ trait FillOriginMethod
 
     public function setOriginMethod(ReflectionMethod $method): static
     {
-        $this->originMethod = $method;
-        $this->joinPoint = new JoinPoint($method);
-        return $this;
+        $self = new self($this->pointcut);
+        $self->originMethod = $method;
+        $self->joinPoint = new JoinPoint($method);
+        //$this->originMethod = $method;
+        //$this->joinPoint = new JoinPoint($method);
+        return $self;
     }
 }

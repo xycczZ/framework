@@ -6,7 +6,9 @@ namespace Xycc\Winter\Contract\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_ALL)]
-#[NoProxy]
-class Primary
+class Required
 {
+    public function __construct(public bool $required = true)
+    {
+    }
 }

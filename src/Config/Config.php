@@ -11,11 +11,13 @@ use JetBrains\PhpStorm\ArrayShape;
 use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\Yaml\Yaml;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Config\ConfigContract;
 use Yosymfony\Toml\Toml;
 
-#[Bean('config')]
+#[Component('config')]
+#[NoProxy]
 class Config implements ConfigContract, ArrayAccess, IteratorAggregate
 {
     private array $config = [];
