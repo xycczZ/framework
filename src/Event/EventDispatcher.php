@@ -10,7 +10,7 @@ use ReflectionClass;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Lazy;
 use Xycc\Winter\Contract\Container\ContainerContract;
-use Xycc\Winter\Core\Servers\HttpServer;
+use Xycc\Winter\Core\Servers\Server;
 use Xycc\Winter\Event\Attributes\Event;
 
 #[Bean]
@@ -23,7 +23,7 @@ class EventDispatcher implements EventDispatcherInterface, ListenerProviderInter
      */
     public function __construct(
         private ContainerContract $app,
-        #[Lazy] private HttpServer $server,
+        #[Lazy] private Server $server,
         private array $events = [],
     )
     {
@@ -41,7 +41,7 @@ class EventDispatcher implements EventDispatcherInterface, ListenerProviderInter
         $this->runEvents((array)$listeners, $event, $async);
     }
 
-    private function runEvents(array $listeners, AbstractEvent $event, bool $async)
+    private function runEvents(array $listeners, object $event, bool $async)
     {
         if ($async) {
             $this->server->getServer()->task(['type' => 'listener', 'listeners' => $listeners, 'event' => $event]);
@@ -50,7 +50,7 @@ class EventDispatcher implements EventDispatcherInterface, ListenerProviderInter
 
         foreach ($listeners as $listener) {
             $this->app->execute([$listener, 'handle'], ['event' => $event]);
-            if ($event->isPropagationStopped()) {
+            if (method_exists($event, 'isPropagationStopped') && $event->isPropagationStopped()) {
                 return;
             }
         }

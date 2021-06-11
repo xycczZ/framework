@@ -11,7 +11,7 @@ final class Listener extends Bean
 {
     public array $events = [];
 
-    public function __construct(public ?string $value = null, ...$events)
+    public function __construct(public ?string $value = null, $events)
     {
         $this->events = $events;
     }

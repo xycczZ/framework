@@ -4,17 +4,16 @@ declare(strict_types=1);
 namespace Xycc\Winter\Core\Commands;
 
 
-use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Xycc\Winter\Container\Application;
-use Xycc\Winter\Core\Servers\HttpServer;
+use Xycc\Winter\Core\Servers\Server;
 
 
-class Server extends Command
+class ServerCommand extends Command
 {
     public function __construct(private Application $app, string $name = null)
     {
@@ -47,7 +46,7 @@ class Server extends Command
         $config = $this->app->get('config');
         $serverConfig = $config->get(sprintf('server'));
 
-        $server = $this->app->get(HttpServer::class);
+        $server = $this->app->get(Server::class);
         $server->{$action}($serverConfig);
 
         return 0;

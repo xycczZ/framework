@@ -90,7 +90,23 @@ class BeanFactory
      * If more than one is found, return the primary.
      * If there are multiple eligible types, find the dependency with the same name
      */
-    protected function getNameType(?string $name, ReflectionProperty|ReflectionParameter $ref, ?BeanInfo $parent = null)
+    protected function autowired(?string $name, int $mode, ReflectionProperty|ReflectionParameter $ref, ?BeanInfo $parent = null)
+    {
+        $instance = match ($mode) {
+            Autowired::AUTO => $this->autowiredWithName($name, $ref, $parent) ?? $this->autowiredWithType($name, $ref, $parent),
+            Autowired::BY_NAME => $this->autowiredWithName($name, $ref, $parent),
+            Autowired::BY_TYPE => $this->autowiredWithType($name, $ref, $parent),
+            default => null,
+        };
+
+        if ($instance === null) {
+            throw new NotFoundException($name ?? ($ref->hasType() ? $ref->getType()->getName() : $ref->name));
+        }
+
+        return $instance;
+    }
+
+    protected function autowiredWithName(?string $name, ReflectionParameter|ReflectionProperty $ref, ?Beaninfo $parent)
     {
         if (isset($this->beans[$name])) {
             return $this->resolveInstance($this->beans[$name], $parent);
@@ -100,6 +116,11 @@ class BeanFactory
             return $this->getByName($ref->name, $parent);
         }
 
+        return null;
+    }
+
+    protected function autowiredWithType(?string $name, ReflectionParameter|ReflectionProperty $ref, ?BeanInfo $parent)
+    {
         $refType = $ref->getType();
         if ($refType instanceof ReflectionUnionType) {
             throw new RuntimeException('cannot inject union types, name: ' . $name . ', type: ' . $refType);
@@ -124,7 +145,8 @@ class BeanFactory
         if (count($fitNames) === 1) {
             return $this->resolveInstance(current($fitNames), $parent);
         }
-        throw new NotFoundException('Not found bean: ' . $refType->getName());
+
+        throw new InvalidBindingException(sprintf('Cannot determine the unique bean, names: %s', implode(', ', array_map(fn (BeanInfo $info) => $info->getName(), $fitNames))));
     }
 
     public function has(string $name)
@@ -486,8 +508,8 @@ class BeanFactory
             } elseif ($autowired = $info->getDef()->getPropAttrs($prop->name, Autowired::class)) {
                 $autowiredInstance = $autowired[0]->newInstance();
                 $name = $autowiredInstance->value;
-                //$mode = $autowiredInstance->by; // todo inject by mode
-                $injected = $this->getNameType($name, $prop, $info);
+                $mode = $autowiredInstance->by;
+                $injected = $this->autowired($name, $mode, $prop, $info);
                 $prop->setValue($instance, $injected);
             }
         }

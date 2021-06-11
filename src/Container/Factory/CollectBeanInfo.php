@@ -39,7 +39,6 @@ trait CollectBeanInfo
             throw new InvalidBindingException(sprintf('Bean %s must have #[Bean] attribute', $method->getReturnType()));
         }
 
-        $type = $this->parseRefType($method->getReturnType());
         $name = $bean->value ?: $method->name;
 
         if (isset($this->beans[$name])) {
