@@ -15,11 +15,11 @@ class UserProcess extends Bean
     public const PIPE_DRAM = 2;
 
     public function __construct(
+        public ?string $value = null,
         public bool $redirectStdinStdout = false,
         #[ExpectedValues(flagsFromClass: self::class)]
         public int $pipeType = self::PIPE_NONE,
         public bool $enableCoroutine = true)
     {
-        parent::__construct();
     }
 }
