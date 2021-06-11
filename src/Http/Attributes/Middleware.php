@@ -4,10 +4,10 @@
 namespace Xycc\Winter\Http\Attributes;
 
 use Attribute;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-abstract class Middleware extends Bean
+abstract class Middleware extends Component
 {
     public function __construct(
         public ?string $value = null,

@@ -117,6 +117,14 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this->refParams[$method][$name] ?? null;
     }
 
+    public function reload(SplFileInfo $file, string $fqn)
+    {
+        $this->fileInfo = $file;
+        $this->className = $fqn;
+        $this->refClass = new ReflectionClass($fqn);
+        $this->parseMetadata($this->refClass);
+    }
+
     protected function filterAttribute(array $attributes, string $attribute, bool $extends = false): array
     {
         return array_values(array_filter(

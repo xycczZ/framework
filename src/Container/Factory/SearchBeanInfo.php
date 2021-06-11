@@ -19,7 +19,7 @@ trait SearchBeanInfo
      */
     protected function searchByType(string $type, bool $isBean = true): array
     {
-        return array_values(array_filter($this->beans, fn (BeanInfo $info) => $info->getDef()?->getClassName() === $type || is_subclass_of($info->getDef()?->getClassName(), $type) && (!$isBean || $info?->getDef()->isBean())));
+        return array_values(array_filter($this->beans, fn (BeanInfo $info) => $info->getDef()?->getClassName() === $type || is_subclass_of($info->getDef()?->getClassName(), $type) && (!$isBean || $info->getDef()->isBean())));
     }
 
     protected function searchHighestByType(string $type, bool $isBean = true): ?BeanInfo

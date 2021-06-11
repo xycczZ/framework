@@ -14,6 +14,7 @@ use ReflectionUnionType;
 use RuntimeException;
 use Xycc\Winter\Config\Attributes\Value;
 use Xycc\Winter\Container\BeanDefinitionCollection;
+use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\Components\AttributeParser;
 use Xycc\Winter\Container\Exceptions\CycleDependencyException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
@@ -21,12 +22,13 @@ use Xycc\Winter\Container\Exceptions\MultiPrimaryException;
 use Xycc\Winter\Container\Exceptions\NotFoundException;
 use Xycc\Winter\Container\Proxy\LazyObject;
 use Xycc\Winter\Contract\Attributes\Autowired;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Lazy;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Attributes\Required;
 use Xycc\Winter\Contract\Attributes\Scope;
 
-#[Bean]
+#[Component, NoProxy]
 class BeanFactory
 {
     use CollectBeanInfo, SearchBeanInfo;
@@ -34,7 +36,7 @@ class BeanFactory
     /**
      * @var BeanInfo[]
      */
-    protected array $beans = [];
+    public array $beans = [];
 
     private static array $dependencyNames = [];
 
@@ -90,7 +92,7 @@ class BeanFactory
      * If more than one is found, return the primary.
      * If there are multiple eligible types, find the dependency with the same name
      */
-    protected function autowired(?string $name, int $mode, ReflectionProperty|ReflectionParameter $ref, ?BeanInfo $parent = null)
+    protected function autowired(?string $name, int $mode, ReflectionProperty|ReflectionParameter $ref, bool $required = true, ?BeanInfo $parent = null)
     {
         $instance = match ($mode) {
             Autowired::AUTO => $this->autowiredWithName($name, $ref, $parent) ?? $this->autowiredWithType($name, $ref, $parent),
@@ -100,7 +102,13 @@ class BeanFactory
         };
 
         if ($instance === null) {
-            throw new NotFoundException($name ?? ($ref->hasType() ? $ref->getType()->getName() : $ref->name));
+            if ($required) {
+                throw new NotFoundException($name ?? ($ref->hasType() ? $ref->getType()->getName() : $ref->name));
+            } else {
+
+                $allowsNull = ($ref instanceof ReflectionProperty && $ref->getType()->allowsNull()) || ($ref instanceof ReflectionParameter && $ref->allowsNull());
+                return $allowsNull ? null : throw new NotFoundException($name ?? $ref->getType()->getName());
+            }
         }
 
         return $instance;
@@ -124,6 +132,11 @@ class BeanFactory
         $refType = $ref->getType();
         if ($refType instanceof ReflectionUnionType) {
             throw new RuntimeException('cannot inject union types, name: ' . $name . ', type: ' . $refType);
+        } elseif ($refType === null) {
+            if ($ref instanceof ReflectionParameter) {
+                throw new NotFoundException(sprintf('%s::%s(%s) have no type hints, cannot inject', $ref->getDeclaringClass()->name, $ref->getDeclaringFunction()->name, $ref->name));
+            }
+            throw new NotFoundException(sprintf('%s.%s have no type hints, cannot inject', $ref->getDeclaringClass()->name, $ref->name));
         }
 
         $infos = $this->searchByType($refType->getName(), true);
@@ -214,7 +227,8 @@ class BeanFactory
             return $this->execute([$conf, $info->getConfMethod()]);
         }
 
-        return $this->invokeConstructor($info);
+        $result = $this->invokeConstructor($info);
+        return $result;
     }
 
     protected function invokeConstructor(BeanInfo $info)
@@ -298,7 +312,9 @@ class BeanFactory
         } elseif (AttributeParser::getAttribute($paramAttrs, Lazy::class)) {
             return $this->handleLazyAttr($param);
         } elseif ($autowiredAttr = AttributeParser::getAttribute($paramAttrs, Autowired::class)) {
-            return $this->handleAutowiredAttr($autowiredAttr->newInstance(), $param, $parent, $required);
+            //return $this->handleAutowiredAttr($autowiredAttr->newInstance(), $param, $parent, $required);
+            $autowired = $autowiredAttr->newInstance();
+            return $this->autowired($autowired->value, $autowired->by, $param, $required, $parent);
         }
         return null;
     }
@@ -346,68 +362,9 @@ class BeanFactory
         if ($ref instanceof ReflectionParameter) {
             $msg = sprintf('参数%s::%s(%s)的依赖未找到，尝试为 Autowired 注解添加名字限定或者为参数添加类型限定', $ref->getDeclaringClass()->name, $ref->getDeclaringFunction()->name, $ref->name);
         } else {
-            $msg = sprintf('属性%s::%s的依赖未找到, 尝试为Autowired注解添加名字限定或者为属性添加类型限定', $ref->getDeclaringClass()->name, $ref->name);
+            $msg = sprintf('属性%s.%s的依赖未找到, 尝试为Autowired注解添加名字限定或者为属性添加类型限定', $ref->getDeclaringClass()->name, $ref->name);
         }
         throw new NotFoundException(message: $msg);
-    }
-
-    private function handleAutowiredAttr(Autowired $autowired, ReflectionParameter|ReflectionProperty $param, ?BeanInfo $parent = null, bool $required = true)
-    {
-        $by = $autowired->by;
-        if ($by === Autowired::AUTO) {
-            $name = $autowired->value ?: $param->name;
-            $info = $this->searchByName($name);
-            if ($info === null) {
-                if ($autowired->value) {
-                    $type = $autowired->value;
-                } else {
-                    $type = $param->getType();
-                    if ($type === null) {
-                        throw new RuntimeException('Autowired by type needs to specify the type');
-                    } elseif ($type instanceof ReflectionUnionType) {
-                        throw new RuntimeException('Autowired cannot accept union types');
-                    }
-                    $type = $type->getName();
-                }
-            }
-            $info = $this->searchHighestByType($type);
-        } elseif ($by === Autowired::BY_NAME) {
-            $name = $autowired->value ?: $param->name;
-            $info = $this->searchByName($name);
-        } else {
-            if ($autowired->value) {
-                $type = $autowired->value;
-            } else {
-                $type = $param->getType();
-                if ($type === null) {
-                    throw new RuntimeException('Autowired by type needs to specify the type');
-                } elseif ($type instanceof ReflectionUnionType) {
-                    throw new RuntimeException('Autowired cannot accept union types');
-                }
-                $type = $type->getName();
-            }
-            $info = $this->searchHighestByType($type);
-        }
-
-        if ($info !== null) {
-            $result = $this->resolveInstance($info, $parent);
-        } else {
-            $type = $this->getRefType($param->getType());
-            if ($type === null) {
-                $this->notFountPropOrParam($param);
-            }
-            $info = $this->searchHighestByType($type);
-            if ($info === null) {
-                throw new NotFoundException($type);
-            }
-            $result = $this->resolveInstance($info, $parent);
-        }
-
-        if ($result === null && $required) {
-            throw new NotFoundException($info->getName());
-        }
-
-        return $result;
     }
 
     protected function createProxy(BeanInfo $info, bool $haveType)
@@ -509,7 +466,7 @@ class BeanFactory
                 $autowiredInstance = $autowired[0]->newInstance();
                 $name = $autowiredInstance->value;
                 $mode = $autowiredInstance->by;
-                $injected = $this->autowired($name, $mode, $prop, $info);
+                $injected = $this->autowired($name, $mode, $prop, $required, $info);
                 $prop->setValue($instance, $injected);
             }
         }
@@ -539,5 +496,15 @@ class BeanFactory
                 $info->clearSession();
             }
         }
+    }
+
+    public function reload(AbstractBeanDefinition $def, string $originClass)
+    {
+        $name = (current($def->getClassAttributes(Component::class, true)) ?: null)?->newInstance()?->value ?: $originClass;
+        $this->beans[$name]->setInstance(null);
+        //if ($def->getClassName() !== $name) {
+        //    $this->beans[$def->getClassName()] = $this->beans[$name];
+        //    unset($this->beans[$name]);
+        //}
     }
 }

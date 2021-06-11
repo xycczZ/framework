@@ -13,6 +13,7 @@ use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\Exceptions\DuplicatedIdentityException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
 use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Lazy;
 use Xycc\Winter\Contract\Attributes\Order;
 use Xycc\Winter\Contract\Attributes\Primary;
@@ -66,7 +67,7 @@ trait CollectBeanInfo
         return $type;
     }
 
-    protected function createBeanName(Bean $bean, ?string $type): string
+    protected function createBeanName(Component $bean, ?string $type): string
     {
         if ($bean->value) {
             return $bean->value;
@@ -89,9 +90,9 @@ trait CollectBeanInfo
 
     protected function addClassBean(AbstractBeanDefinition $def)
     {
-        $bean = $this->getFirstClassAttr($def, Bean::class, true);
+        $bean = $this->getFirstClassAttr($def, Component::class, true);
         if ($bean === null) {
-            throw new InvalidBindingException(sprintf('Bean %s must have #[Bean] attribute', $def->getClassName()));
+            throw new InvalidBindingException(sprintf('Bean %s must have #[Component] attribute', $def->getClassName()));
         }
 
         $name = $this->createBeanName($bean, $def->getClassName());

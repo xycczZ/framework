@@ -16,7 +16,8 @@ use Swoole\Server\Task;
 use Swoole\Server\TaskResult;
 use Swoole\WebSocket\Server as SwooleServer;
 use Xycc\Winter\Container\Application;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Config\ConfigContract;
 use Xycc\Winter\Core\CoreBoot;
 use Xycc\Winter\Core\Events\OnRequest;
@@ -29,7 +30,7 @@ use Xycc\Winter\Http\Response\Response;
 use Xycc\Winter\Route\Router;
 
 
-#[Bean]
+#[Component, NoProxy]
 class Server
 {
     private SwooleServer $server;

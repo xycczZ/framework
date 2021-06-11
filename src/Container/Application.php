@@ -6,10 +6,11 @@ namespace Xycc\Winter\Container;
 use SplFileInfo;
 use Xycc\Winter\Config\Config;
 use Xycc\Winter\Container\{BeanDefinitions\ClassBeanDefinition, Factory\BeanFactory, Proxy\ProxyManager};
-use Xycc\Winter\Contract\{Attributes\Bean, Bootstrap, Container\ContainerContract};
+use Xycc\Winter\Contract\{Attributes\Component, Attributes\NoProxy, Bootstrap, Container\ContainerContract};
 
 
-#[Bean('app')]
+#[Component('app')]
+#[NoProxy]
 class Application implements ContainerContract
 {
     protected BeanDefinitionCollection $beanDefinitions;
@@ -83,9 +84,10 @@ class Application implements ContainerContract
         // 扫描配置
         $this->clearProxy();
         $this->clearWeaves();
-        $this->collectComponents();
 
         $this->bootstrap();
+
+        $this->collectComponents();
     }
 
     protected function addPredefinedComponents()
@@ -108,6 +110,10 @@ class Application implements ContainerContract
         $this->beanDefinitions->proxyManager = $proxyManager;
         $this->beanFactory->setPredefinedInstance('beanManager', $definitions, $this->beanDefinitions);
         $this->beanDefinitions->add($definitions);
+
+        $factory = new ClassBeanDefinition(BeanFactory::class, new SplFileInfo(__DIR__ . '/Factory/BeanFactory.php'), $this->beanDefinitions);
+        $this->beanDefinitions->add($factory);
+        $this->beanFactory->setPredefinedInstance(BeanFactory::class, $factory, $this->beanFactory);
     }
 
     /**

@@ -20,9 +20,11 @@ use Xycc\Winter\Container\Application;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
 use Xycc\Winter\Container\ClassLoader;
 use Xycc\Winter\Container\Exceptions\CannotProxyFinalException;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
-#[Bean]
+#[Component]
+#[NoProxy]
 class ProxyManager
 {
     private Parser $parser;

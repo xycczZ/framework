@@ -4,9 +4,9 @@
 namespace Xycc\Winter\Http\Attributes;
 
 use Attribute;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class ExceptionHandler extends Bean
+class ExceptionHandler extends Component
 {
 }

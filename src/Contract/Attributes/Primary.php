@@ -6,6 +6,7 @@ namespace Xycc\Winter\Contract\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_ALL)]
+#[NoProxy]
 class Primary
 {
 }

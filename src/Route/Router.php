@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Xycc\Winter\Route;
 
 use Closure;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Route\Attributes\Route;
 use Xycc\Winter\Route\Exceptions\InvalidRouteException;
 use Xycc\Winter\Route\Exceptions\RouteMatchException;
 
-#[Bean]
+#[Component]
+#[NoProxy]
 class Router
 {
     private array $routes = [

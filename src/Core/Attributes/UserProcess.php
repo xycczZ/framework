@@ -5,10 +5,10 @@ namespace Xycc\Winter\Core\Attributes;
 
 use Attribute;
 use JetBrains\PhpStorm\ExpectedValues;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class UserProcess extends Bean
+class UserProcess extends Component
 {
     public const PIPE_NONE = 0;
     public const PIPE_STREAM = 1;

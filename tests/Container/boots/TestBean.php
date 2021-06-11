@@ -6,10 +6,10 @@ namespace Xycc\Winter\Tests\Container\boots;
 
 use Xycc\Winter\Config\Attributes\Value;
 use Xycc\Winter\Contract\Attributes\Autowired;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Primary;
 
-#[Bean('testBean')]
+#[Component('testBean')]
 #[Primary]
 class TestBean implements TestBeanInterface
 {

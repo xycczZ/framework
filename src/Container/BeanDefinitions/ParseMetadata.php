@@ -12,6 +12,7 @@ use ReflectionProperty;
 use Xycc\Winter\Container\Components\AttributeParser;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Configuration;
 
 
@@ -86,7 +87,7 @@ trait ParseMetadata
         $this->classAttributes = $ref->getAttributes();
         $this->allClassAttributes = AttributeParser::collectAttributes($this->classAttributes);
 
-        $bean = $this->filterFirstAttribute($this->allClassAttributes, Bean::class)?->newInstance();
+        $bean = $this->filterFirstAttribute($this->allClassAttributes, Component::class)?->newInstance();
         $this->bean = $bean !== null;
 
         $this->isConfiguration = !empty(

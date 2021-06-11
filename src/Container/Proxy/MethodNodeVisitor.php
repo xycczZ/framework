@@ -8,10 +8,11 @@ use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use Xycc\Winter\Container\Exceptions\CannotProxyFinalException;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 class MethodNodeVisitor extends NameResolver
 {
-    private const LAZY_METHOD = '__callOriginMethodAndReplaceSelf__';
+    private const LAZY_METHOD = '__callOriginMethod__';
 
     /**
      * Final类不能生成代理
@@ -31,6 +32,7 @@ class MethodNodeVisitor extends NameResolver
                 throw new CannotProxyFinalException('不能生成final类的代理');
             }
             $node->stmts[] = new Node\Stmt\TraitUse([new Node\Name(LazyObject::class)]);
+            $node->attrGroups = [new Node\AttributeGroup([new Node\Attribute(new Node\Name(NoProxy::class))])];
             $oldClassName = $node->name->name;
             if ($node->namespacedName) {
                 $node->extends = new Node\Name\FullyQualified($node->namespacedName->toString());
@@ -41,7 +43,6 @@ class MethodNodeVisitor extends NameResolver
             $node->namespacedName = null;
             $node->name->name .= uniqid('__proxy__');
             $node->flags = Node\Stmt\Class_::MODIFIER_FINAL;
-            $node->attrGroups = [];
         } elseif ($node instanceof Node\Stmt\ClassMethod && (!$node->isPrivate() || !$node->isMagic())) {
             if ($node->name->name === '__construct') {
                 $node = new Node\Stmt\ClassMethod(new Node\Identifier('__construct'), [

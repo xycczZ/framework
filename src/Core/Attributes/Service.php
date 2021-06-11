@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Xycc\Winter\Core\Attributes;
 
 
-use Xycc\Winter\Contract\Attributes\Bean;
+use Attribute;
+use Xycc\Winter\Contract\Attributes\Component;
 
-final class Service extends Bean
+#[Attribute(Attribute::TARGET_CLASS)]
+final class Service extends Component
 {
 }

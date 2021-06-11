@@ -4,10 +4,12 @@
 namespace Xycc\Winter\Event\Attributes;
 
 use Attribute;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-final class Listener extends Bean
+#[NoProxy]
+final class Listener extends Component
 {
     public array $events = [];
 

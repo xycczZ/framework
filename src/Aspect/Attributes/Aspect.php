@@ -4,9 +4,9 @@
 namespace Xycc\Winter\Aspect\Attributes;
 
 use Attribute;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-final class Aspect extends Bean
+final class Aspect extends Component
 {
 }

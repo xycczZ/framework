@@ -6,7 +6,11 @@ namespace Xycc\Winter\Contract\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-#[NoProxy]
-class Configuration extends Component
+class Component
 {
+    public function __construct(
+        public ?string $value = null,
+    )
+    {
+    }
 }

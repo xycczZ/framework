@@ -6,11 +6,8 @@ namespace Xycc\Winter\Container\Files;
 
 use RecursiveFilterIterator;
 use RecursiveIterator;
-use ReflectionAttribute;
-use ReflectionClass;
 use SplFileInfo;
 use Xycc\Winter\Container\FileIterator;
-use Xycc\Winter\Contract\Attributes\Bean;
 
 class ScriptFilterIterator extends RecursiveFilterIterator
 {
@@ -30,13 +27,7 @@ class ScriptFilterIterator extends RecursiveFilterIterator
             return false;
         }
         $className = FileIterator::getClassName($file);
-        //return class_exists($className);
-        if (!class_exists($className)) {
-            return false;
-        }
+        return class_exists($className) && !trait_exists($className);
 
-        //$ref = new ReflectionClass($className);
-        //return count($ref->getAttributes(Bean::class, ReflectionAttribute::IS_INSTANCEOF)) > 0;
-        return true;
     }
 }

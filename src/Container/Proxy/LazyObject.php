@@ -23,9 +23,9 @@ trait LazyObject
      * 判断是否有对象存在，有对象存在就直接调用对象的方法
      * 如果没有对象存在，就创建一个新的
      */
-    public function __callOriginMethodAndReplaceSelf__($method, ...$args)
+    public function __callOriginMethod__($method, ...$args)
     {
-        $instance = $this->__BEAN_FACTORY__->getByName($this->__BEAN_NAME__);
+        $instance = $this->__BEAN_FACTORY__->get($this->__BEAN_NAME__);
         return $instance->{$method}(...$args);
     }
 }

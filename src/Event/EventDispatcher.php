@@ -7,13 +7,14 @@ namespace Xycc\Winter\Event;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\EventDispatcher\ListenerProviderInterface;
 use ReflectionClass;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Lazy;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Container\ContainerContract;
 use Xycc\Winter\Core\Servers\Server;
 use Xycc\Winter\Event\Attributes\Event;
 
-#[Bean]
+#[Component, NoProxy]
 class EventDispatcher implements EventDispatcherInterface, ListenerProviderInterface
 {
     /**

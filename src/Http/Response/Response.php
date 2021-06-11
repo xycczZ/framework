@@ -3,20 +3,22 @@
 
 namespace Xycc\Winter\Http\Response;
 
+use Stringable;
 use Swoole\Http\Response as SwooleResponse;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
-use Xycc\Winter\Contract\Attributes\Bean;
+use Xycc\Winter\Contract\Attributes\Component;
+use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Attributes\Scope;
 use Xycc\Winter\Http\Contracts\ToResponse;
 
 /**
  * @mixin SymfonyResponse
  */
-#[Bean]
+#[Component, NoProxy]
 #[Scope(Scope::SCOPE_REQUEST, Scope::MODE_PROXY)]
 class Response
 {
-    protected array|string|int|float|bool|ToResponse|\Stringable $content = '';
+    protected array|string|int|float|bool|ToResponse|Stringable $content = '';
     protected SymfonyResponse $response;
     // swoole response only used on send
     protected SwooleResponse $swooleResponse;
@@ -44,7 +46,7 @@ class Response
         return $this->content;
     }
 
-    public function setContent(array|string|int|float|bool|ToResponse|\Stringable $content): self
+    public function setContent(array|string|int|float|bool|ToResponse|Stringable $content): self
     {
         $this->content = $content;
         return $this;
