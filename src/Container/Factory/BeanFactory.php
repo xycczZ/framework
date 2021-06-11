@@ -116,15 +116,33 @@ class BeanFactory
 
     protected function autowiredWithName(?string $name, ReflectionParameter|ReflectionProperty $ref, ?Beaninfo $parent)
     {
-        if (isset($this->beans[$name])) {
-            return $this->resolveInstance($this->beans[$name], $parent);
+        if ($name) {
+            if (isset($this->beans[$name])) {
+                $instance = $this->resolveInstance($this->beans[$name], $parent);
+                return $this->ensureType($ref, $instance, $name);
+            } else {
+                return null;
+            }
+        } elseif (!$ref->hasType() && isset($this->beans[$ref->name])) {
+            return $this->resolveInstance($this->beans[$ref->name], $parent);
+        } else {
+            return null;
         }
+    }
 
-        if (!$ref->hasType()) {
-            return $this->getByName($ref->name, $parent);
+    protected function ensureType(ReflectionParameter|ReflectionProperty $ref, $instance, ?string $name)
+    {
+        if ($ref->hasType()) {
+            $type = $ref->getType();
+            if ($type instanceof ReflectionNamedType) {
+                return is_subclass_of($instance::class, $type->getName()) || $instance::class === $type->getName()
+                    ? $instance
+                    : throw new NotFoundException($name ?: $ref->name);
+            } else {
+                throw new RuntimeException('cannot inject union types');
+            }
         }
-
-        return null;
+        return $instance;
     }
 
     protected function autowiredWithType(?string $name, ReflectionParameter|ReflectionProperty $ref, ?BeanInfo $parent)
@@ -162,7 +180,7 @@ class BeanFactory
         throw new InvalidBindingException(sprintf('Cannot determine the unique bean, names: %s', implode(', ', array_map(fn (BeanInfo $info) => $info->getName(), $fitNames))));
     }
 
-    public function has(string $name)
+    public function has(string $name): bool
     {
         return isset($this->beans[$name]);
     }

@@ -198,7 +198,7 @@ class Node
     public function addChild(string $path): static
     {
         // sort?
-        $new = array_filter($this->children, fn ($item) => $item->path === $path);
+        $new = array_values(array_filter($this->children, fn ($item) => $item->path === $path));
         if (count($new) !== 0) {
             self::$inserted = false;
             return $new[0];

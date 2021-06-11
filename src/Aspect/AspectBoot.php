@@ -70,11 +70,7 @@ class AspectBoot extends Bootstrap
                 $refMethod = $aspect->getRefMethod($advise);
                 $attr = $refMethod->getAttributes(Advise::class, ReflectionAttribute::IS_INSTANCEOF)[0]->newInstance();
                 $instance = $container->get($aspect->getName());
-                if ($attr instanceof Around) {
-                    $closure = fn (...$args) => $instance->{$advise}(...$args);
-                } else {
-                    $closure = fn (...$args) => $instance->{$advise}(...$args);
-                }
+                $closure = fn (...$args) => $instance->{$advise}(...$args);
                 $processors[$aspect->getClassName()][$advise] = match ($attr::class) {
                     Before::class => new BeforeProcessor($closure),
                     After::class => new AfterProcessor($closure),

@@ -247,6 +247,7 @@ class Server
                 return $resp;
             }
             $response = $this->app->get(Response::class);
+            $response->setStatusCode($resp ? 200 : 204);
             return $response->setContent($resp ?: '');
         };
     }

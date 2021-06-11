@@ -14,7 +14,6 @@ trait Weaving
 
     private function __getProxyClosure__(string $method): Closure
     {
-        dump($method);
         return $this->__FACTORY__->getProxy(self::__ID__, $method);
     }
 }

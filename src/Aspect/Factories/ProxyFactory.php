@@ -15,7 +15,6 @@ use PhpParser\PrettyPrinter\Standard;
 use ReflectionMethod;
 use RuntimeException;
 use SplFileInfo;
-use Xycc\Winter\Aspect\Attributes\Aspect;
 use Xycc\Winter\Aspect\Expressions\Expression;
 use Xycc\Winter\Aspect\Processors\ProxyProcessor;
 use Xycc\Winter\Container\Application;
@@ -25,7 +24,6 @@ use Xycc\Winter\Container\ClassLoader;
 use Xycc\Winter\Container\Factory\BeanFactory;
 use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\NoProxy;
-use Xycc\Winter\Contract\Attributes\Primary;
 
 
 #[Component]
@@ -70,14 +68,11 @@ class ProxyFactory
         $defs = $this->collection->filterDefinitions(
             fn (AbstractBeanDefinition $def) => $def->isBean() &&
                 $def->getFile() !== null &&
-                !$def->classHasAttribute(Aspect::class) &&
                 $def->getClassName() !== null &&
                 !$def->getRefClass()->isFinal() &&
                 $def->getRefClass()->isInstantiable() &&
                 !$def->getRefClass()->isAnonymous() &&
-                !$def->isConfiguration() &&
-                !$def->classHasAttribute(NoProxy::class) &&
-                !$def->classHasAttribute(Primary::class, true)
+                !$def->classHasAttribute(NoProxy::class)
         );
 
         foreach ($this->pointcutAdviseMap as $expression => $aspectIdAndAdvises) {
@@ -121,7 +116,7 @@ class ProxyFactory
         ), $aspectIdAndAdvises);
         $result = [];
         foreach ($data as $value) {
-            $result = array_merge($result, $value);
+            $result = [...$result, ...$value];
         }
         return $result;
     }
