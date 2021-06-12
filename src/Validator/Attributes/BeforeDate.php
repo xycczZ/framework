@@ -6,12 +6,12 @@ namespace Xycc\Winter\Validator\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class BeforeDate extends ValidationRule
+class BeforeDate extends Rule
 {
     public function __construct(
-        public \DateTimeInterface $dateTime,
+        public string $dateTime,
         public bool $eq = false,
-        public string $scene = '',
+        public array $scenes = ['default'],
         public string $errorMsg = '',
     )
     {

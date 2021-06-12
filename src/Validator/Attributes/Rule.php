@@ -4,10 +4,10 @@
 namespace Xycc\Winter\Validator\Attributes;
 
 
-abstract class ValidationRule
+abstract class Rule
 {
     public function __construct(
-        public string $scene = '',
+        public array $scenes = ['default'],
         public string $errorMsg = '',
     )
     {

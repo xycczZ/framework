@@ -21,7 +21,8 @@
         "psr/event-dispatcher": "1.0.x-dev",
         "monolog/monolog": "~2.2",
         "ext-pcntl": "*",
-        "symfony/http-foundation": "6.0.x-dev"
+        "symfony/http-foundation": "6.0.x-dev",
+        "nesbot/carbon": "4.x-dev"
     },
     "replace": {
         "xycc/contract": "self.version",
@@ -62,7 +63,8 @@
             "Xycc\\Winter\\Container\\ContainerBoot",
             "Xycc\\Winter\\Core\\CoreBoot",
             "Xycc\\Winter\\Http\\HttpBoot",
-            "Xycc\\Winter\\Aspect\\AspectBoot"
+            "Xycc\\Winter\\Aspect\\AspectBoot",
+            "Xycc\\Winter\\Validator\\ValidatorBoot"
         ]
     },
     "scripts": {

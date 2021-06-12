@@ -6,11 +6,11 @@ namespace Xycc\Winter\Validator\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class Min extends ValidationRule
+class Min extends Rule
 {
     public function __construct(
         public int|float $min,
-        public string $scene = '',
+        public array $scenes = ['default'],
         public string $errorMsg = '',
     )
     {

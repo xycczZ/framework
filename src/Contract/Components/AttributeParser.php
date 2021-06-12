@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Xycc\Winter\Contract\Components;
 
 
+use Attribute;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -123,5 +124,25 @@ class AttributeParser
         }
 
         return null;
+    }
+
+    public static function hasAttribute(array $attributes, string $attr): bool
+    {
+        foreach ($attributes as $attribute) {
+            $class = $attribute->getName();
+
+            if ($class === $attr || is_subclass_of($class, $attr)) {
+                return true;
+            }
+
+            if ($class !== Attribute::class) {
+                $attrs = (new ReflectionClass($class))->getAttributes();
+                if (self::hasAttribute($attrs, $attr)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
