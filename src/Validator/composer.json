@@ -1,0 +1,23 @@
+{
+  "name": "xycc/validator",
+  "description": "route",
+  "type": "library",
+  "authors": [
+    {
+      "name": "invoker",
+      "email": "xycc.love@xycc.love"
+    }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "xycc/contract": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "Xycc\\Winter\\Validator\\": ""
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}
