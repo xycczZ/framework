@@ -10,6 +10,6 @@ use Attribute;
  * The parameter passed in is not the value of a parameter, but all the values
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-class BeforeValidate
+class ValidateAllData
 {
 }

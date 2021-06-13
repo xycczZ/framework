@@ -6,7 +6,7 @@ namespace Xycc\Winter\Validator\Attributes;
 use Attribute;
 use Closure;
 
-#[BeforeValidate]
+#[ValidateAllData]
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class NotEmpty extends Rule
 {

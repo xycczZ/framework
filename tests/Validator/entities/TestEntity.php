@@ -10,6 +10,7 @@ use Xycc\Winter\Validator\Attributes\Email;
 use Xycc\Winter\Validator\Attributes\EndWith;
 use Xycc\Winter\Validator\Attributes\GreaterThan;
 use Xycc\Winter\Validator\Attributes\NotEmpty;
+use Xycc\Winter\Validator\Attributes\Size;
 use Xycc\Winter\Validator\Attributes\Validation;
 
 #[Validation]
@@ -31,6 +32,9 @@ class TestEntity
     #[EndWith('xyz')]
     public string $end;
 
-    #[GreaterThan(10)]
+    #[Size(10)]
+    public int $size;
+
+    #[GreaterThan('size')]
     public int $gt;
 }

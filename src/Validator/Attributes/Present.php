@@ -5,7 +5,7 @@ namespace Xycc\Winter\Validator\Attributes;
 
 use Attribute;
 
-#[BeforeValidate]
+#[ValidateAllData]
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class Present extends Rule
 {

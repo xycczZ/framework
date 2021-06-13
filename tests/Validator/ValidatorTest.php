@@ -13,6 +13,13 @@ class ValidatorTest extends TestCase
     private Validator $validator;
     private TestEntity $entity;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->entity = new TestEntity();
+        $this->validator = $this->app->get(Validator::class);
+    }
+
     public function testAccepted()
     {
         $data = ['ok' => 'yes'];
@@ -73,17 +80,14 @@ class ValidatorTest extends TestCase
         $this->assertEquals('abcxyz', $this->entity->end);
     }
 
-    public function testGreaterThan()
+    public function testSize()
     {
-        $data = ['date' => '2021-01-01 00:00:00', 'gt' => 123];
+        $data = ['date' => '2021-01-01 00:00:00', 'size' => 11, 'gt' => 12];
+        $errors = $this->validator->validate($data, $this->entity);
+        $this->assertCount(1, $errors);
+
+        $data['size'] = 10;
         $errors = $this->validator->validate($data, $this->entity);
         $this->assertCount(0, $errors);
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->entity = new TestEntity();
-        $this->validator = $this->app->get(Validator::class);
     }
 }

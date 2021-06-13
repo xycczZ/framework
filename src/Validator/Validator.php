@@ -5,29 +5,49 @@ namespace Xycc\Winter\Validator;
 
 
 use Carbon\Carbon;
+use Countable;
 use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
 use RuntimeException;
-use Xycc\Winter\Contract\Attributes\Autowired;
-use Xycc\Winter\Contract\Attributes\Component;
-use Xycc\Winter\Contract\Attributes\NoProxy;
-use Xycc\Winter\Contract\Components\AttributeParser;
-use Xycc\Winter\Contract\Container\ContainerContract;
+use SplFileInfo;
+use Xycc\Winter\Contract\{Attributes\Autowired,
+    Attributes\Component,
+    Attributes\NoProxy,
+    Components\AttributeParser,
+    Container\ContainerContract
+};
 use Xycc\Winter\Http\Request\Request;
-use Xycc\Winter\Validator\Attributes\Accepted;
-use Xycc\Winter\Validator\Attributes\AfterDate;
-use Xycc\Winter\Validator\Attributes\BeforeDate;
-use Xycc\Winter\Validator\Attributes\BeforeValidate;
-use Xycc\Winter\Validator\Attributes\Date;
-use Xycc\Winter\Validator\Attributes\Email;
-use Xycc\Winter\Validator\Attributes\EndWith;
-use Xycc\Winter\Validator\Attributes\GreaterThan;
-use Xycc\Winter\Validator\Attributes\NotEmpty;
-use Xycc\Winter\Validator\Attributes\Rule;
-use Xycc\Winter\Validator\Attributes\Validation;
-use Xycc\Winter\Validator\Attributes\Validator as ValidatorAttr;
+use Xycc\Winter\Validator\Attributes\{Accepted,
+    AfterDate,
+    BeforeDate,
+    Date,
+    Email,
+    EndWith,
+    GreaterThan,
+    In,
+    Ip,
+    LessThan,
+    Max,
+    Min,
+    NotEmpty,
+    NotIn,
+    Numeric,
+    Present,
+    Range,
+    Regex,
+    Rule,
+    Same,
+    Size,
+    Sometimes,
+    StartWith,
+    Type,
+    Unique,
+    ValidateAllData,
+    Validation,
+    Validator as ValidatorAttr
+};
 use Xycc\Winter\Validator\Contracts\RuleInterface;
 use Xycc\Winter\Validator\Exceptions\NoSuchRuleException;
 
@@ -80,10 +100,6 @@ class Validator
     }
 
     /**
-     * 验证数据，验证通过就赋值给这个对象
-     * 验证数据， 解析对象的所有字段注解 ？？？ 一定要用字段吗
-     * 结合laravel的orm， 标在request上还是直接标注在model上？
-     *
      * @see Validation
      */
     public function validate(array $data, object $object, string $scene = 'default'): array
@@ -129,7 +145,7 @@ class Validator
 
         foreach ($rules as $rule) {
             $method = $this->getFilterMethod($rule::class);
-            // 查找本类中是否有这个方法，没有这个方法就找Validator验证类， 包含了这个规则的验证类
+
             if (!method_exists($this, $method) && !isset($this->validators[$rule::class][$scene])) {
                 throw new NoSuchRuleException($method);
             }
@@ -186,7 +202,7 @@ class Validator
     private function isBeforeValidation(Rule $rule): bool
     {
         if (!isset($this->beforeValidation[$rule::class])) {
-            $this->beforeValidation[$rule::class] = AttributeParser::hasAttribute((new ReflectionClass($rule::class))->getAttributes(), BeforeValidate::class);
+            $this->beforeValidation[$rule::class] = AttributeParser::hasAttribute((new ReflectionClass($rule::class))->getAttributes(), ValidateAllData::class);
         }
         return $this->beforeValidation[$rule::class];
     }
@@ -271,6 +287,54 @@ class Validator
             : ($endWith->errorMsg ?: sprintf('%s is not end with %s', $value, $endWith->end));
     }
 
+    protected function greaterThan(array $data, ReflectionProperty $field, GreaterThan $greaterThan): bool|string
+    {
+        if (!isset($data[$field->name]) || !isset($data[$greaterThan->field])) {
+            return sprintf('cannot compare %s and %s, one is not in the request', $field->name, $greaterThan->field);
+        }
+
+        if ($greaterThan->eq) {
+            return $data[$field->name] >= $data[$greaterThan->field] ? true : sprintf('%s is not greater than nor equals %s', $field->name, $greaterThan->field);
+        }
+        return $data[$field->name] > $data[$greaterThan->field] ? true : sprintf('%s is not greater than %s', $field->name, $greaterThan->field);
+    }
+
+    protected function in($value, In $in): bool|string
+    {
+        return in_array($value, $in->range)
+            ? true
+            : ($in->errorMsg ?: sprintf('%s is not in %s', $value, implode(', ', $in->range)));
+    }
+
+    protected function ip($value, Ip $ip): bool|string
+    {
+        return filter_var($value, FILTER_VALIDATE_IP, $ip->v6 ? FILTER_FLAG_IPV6 : FILTER_FLAG_IPV4)
+            ? true
+            : ($ip->errorMsg ?: sprintf('%s is not a valid ip%s address', $value, $ip->v6 ? 'v6' : 'v4'));
+    }
+
+    protected function lessThan(array $data, ReflectionProperty $field, LessThan $lessThan): bool|string
+    {
+        if (!isset($data[$field->name]) && !isset($data[$lessThan->field])) {
+            return sprintf('cannot compare %s and %s, one is not in the request', $field->name, $lessThan->field);
+        }
+
+        if ($lessThan->eq) {
+            return $data[$field->name] <= $data[$lessThan->field] ? true : sprintf('%s is not less than nor equals %s', $field->name, $lessThan->field);
+        }
+        return $data[$field->name] < $data[$lessThan->field] ? true : sprintf('%s is not less than %s', $field->name, $lessThan->field);
+    }
+
+    protected function max($value, Max $max): bool|string
+    {
+        return $value <= $max->max ? true : ($max->errorMsg ?: sprintf('%s is greater than %s', $value, $max->max));
+    }
+
+    protected function min($value, Min $min): bool|string
+    {
+        return $value >= $min->min ? true : ($min->errorMsg ?: sprintf('%s is less than %s', $value, $min->min));
+    }
+
     protected function notEmpty(array $data, ReflectionProperty $field, NotEmpty $notEmpty): bool|string
     {
         return isset($data[$field->name]) && (!is_bool($data[$field->name]) && !!$data[$field->name])
@@ -278,11 +342,105 @@ class Validator
             : ($notEmpty->errorMsg ?: 'must be non empty');
     }
 
-    protected function greaterThan($value, GreaterThan $greaterThan): bool|string
+    protected function notIn($value, NotIn $notIn): bool|string
     {
-        if ($greaterThan->eq) {
-            return $value >= $greaterThan->value ? true : ($greaterThan->errorMsg ?: sprintf('%s is not greater than or equals %s', $value, $greaterThan->value));
+        return in_array($value, $notIn->range, true)
+            ? ($notIn->errorMsg ?: sprintf('%s is in %s', $value, implode(',', $notIn->range)))
+            : true;
+    }
+
+    protected function numeric($value, Numeric $numeric): bool|string
+    {
+        return is_numeric($value)
+            ? true
+            : ($numeric->errorMsg ?: sprintf('%s is not a number', $value));
+    }
+
+    protected function present(array $data, ReflectionProperty $field, Present $present): bool|string
+    {
+        return isset($data[$field->name])
+            ? true
+            : ($present->errorMsg ?: sprintf('%s is not present', $field->name));
+    }
+
+    protected function range($value, Range $range): bool|string
+    {
+        $start = $range->startClose ? ($value >= $range->start) : ($value > $range->start);
+        $end = $range->endClose ? ($value <= $range->end) : ($value < $range->end);
+        return $start && $end
+            ? true
+            : ($range->errorMsg ?: sprintf('%s is not in range %s...%s', $value, $range->start, $range->end));
+    }
+
+    protected function regex($value, Regex $regex): bool|string
+    {
+        $match = !!preg_match($regex->regex, $value);
+        if ($regex->not) {
+            return $match ? ($regex->errorMsg ?: sprintf('%s is match "%s"', $value, $regex->regex)) : true;
         }
-        return $value > $greaterThan->value ? true : ($greaterThan->errorMsg ?: sprintf('%s is not greater than %s', $value, $greaterThan->value));
+        return $match ? true : ($regex->errorMsg ?: sprintf('%s is not match "%s"', $value, $regex->regex));
+    }
+
+    protected function same(array $data, ReflectionProperty $field, Same $same): bool|string
+    {
+        if (!isset($data[$field->name]) || !isset($data[$same->field])) {
+            return sprintf('cannot compare fields: "%s", "%s". One is miss in request', $field->name, $same->field);
+        }
+        return $data[$field->name] === $data[$same->field]
+            ? true
+            : sprintf('%s is not same with %s', $field->name, $same->field);
+    }
+
+    protected function size($value, Size $size): bool|string
+    {
+        $ok = false;
+        if (is_string($value)) {
+            $ok = $size->size === mb_strlen($value);
+        } elseif (is_numeric($value)) {
+            $ok = $size->size === $value;
+        } elseif ($value instanceof Countable) {
+            $ok = $size->size === count($value);
+        } elseif ($value instanceof SplFileInfo) {
+            $ok = $size->size === $value->getSize();
+        }
+
+        return $ok ?: ($size->errorMsg ?: sprintf('The size of "%s" is not equals to %s', $value, $size->size));
+    }
+
+    protected function sometimes(array $data, ReflectionProperty $field, Sometimes $sometimes): bool|string
+    {
+
+    }
+
+    protected function startWith($value, StartWith $startWith): bool|string
+    {
+        return str_starts_with($value, $startWith->start)
+            ? true
+            : ($startWith->errorMsg ?: sprintf('%s is not start with %s', $value, $startWith->start));
+    }
+
+    protected function type($value, Type $type): bool|string
+    {
+        if (class_exists($type->type)) {
+            $ok = $value instanceof $type->type;
+        } else {
+            $ok = match ($type->type) {
+                'string', 'str' => is_string($value),
+                'number', 'numeric', => is_numeric($value),
+                'float', 'double' => is_float($value),
+                'int', 'integer' => is_int($value),
+                'array' => is_array($value),
+                'bool', 'boolean' => is_bool($value),
+                'null' => is_null($value),
+                default => false,
+            };
+        }
+
+        return $ok ?: ($type->errorMsg ?: 'error type');
+    }
+
+    protected function unique($value, Unique $unique): bool|string
+    {
+
     }
 }

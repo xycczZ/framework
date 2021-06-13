@@ -9,10 +9,7 @@ use Attribute;
 class Size extends Rule
 {
     public function __construct(
-        public int $start,
-        public int $end,
-        public bool $startClose = true,
-        public bool $endClose = true,
+        public int|float $size,
         public array $scenes = ['default'],
         public string $errorMsg = '',
     )
