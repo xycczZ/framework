@@ -22,7 +22,8 @@
         "monolog/monolog": "~2.2",
         "ext-pcntl": "*",
         "symfony/http-foundation": "6.0.x-dev",
-        "nesbot/carbon": "4.x-dev"
+        "nesbot/carbon": "4.x-dev",
+        "doctrine/dbal": "4.0.x-dev"
     },
     "replace": {
         "xycc/contract": "self.version",
@@ -31,9 +32,9 @@
         "xycc/core": "self.version",
         "xycc/event": "self.version",
         "xycc/route": "self.version",
-        "xycc/test": "self.version",
         "xycc/http": "self.version",
-        "xycc/aspect": "self.version"
+        "xycc/aspect": "self.version",
+        "xycc/validator": "self.version"
     },
     "require-dev": {
         "phpunit/phpunit": "10.0.x-dev",
@@ -64,7 +65,8 @@
             "Xycc\\Winter\\Core\\CoreBoot",
             "Xycc\\Winter\\Http\\HttpBoot",
             "Xycc\\Winter\\Aspect\\AspectBoot",
-            "Xycc\\Winter\\Validator\\ValidatorBoot"
+            "Xycc\\Winter\\Validator\\ValidatorBoot",
+            "Xycc\\Winter\\Database\\DatabaseBoot"
         ]
     },
     "scripts": {

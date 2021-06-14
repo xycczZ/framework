@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Xycc\Winter\Core;
 
 
+use Xycc\Winter\Container\Factory\BeanFactory;
 use Xycc\Winter\Contract\Bootstrap;
 use Xycc\Winter\Contract\Container\ContainerContract;
 use Xycc\Winter\Core\Attributes\UserProcess;
@@ -25,9 +26,10 @@ class CoreBoot extends Bootstrap
         $processes = $container->getClassesByAttr(UserProcess::class);
 
         $result = [];
+        $factory = $container->get(BeanFactory::class);
         foreach ($processes as $process) {
             $attr = $process->getClassAttributes(UserProcess::class)[0]->newInstance();
-            $instance = $process->getInstance();
+            $instance = $factory->get($attr->value ?: $process->getClassName());
             if (method_exists($instance, 'run')) {
                 $result[] = [
                     'instance' => $instance,

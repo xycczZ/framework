@@ -175,6 +175,7 @@ class Server
 
 
         Coroutine::getContext()['fd'] = $request->fd;
+        Coroutine::getContext()['app'] = $this->app;
 
         /**@var Request $req*/
         /**@var Response $resp*/
