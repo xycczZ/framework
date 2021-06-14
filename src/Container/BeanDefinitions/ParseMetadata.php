@@ -9,7 +9,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
-use Xycc\Winter\Container\Components\AttributeParser;
+use Xycc\Winter\Contract\Components\AttributeParser;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Component;

@@ -12,6 +12,6 @@ class RouteMatchException extends RuntimeException
     public function render(Response $response)
     {
         $response->setStatusCode(404);
-        $response->setContent(['error' => $this->getMessage()]);
+        $response->setContent(json_encode(['error' => $this->getMessage()], JSON_UNESCAPED_UNICODE));
     }
 }

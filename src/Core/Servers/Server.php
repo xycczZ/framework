@@ -23,6 +23,7 @@ use Xycc\Winter\Core\CoreBoot;
 use Xycc\Winter\Core\Events\OnRequest;
 use Xycc\Winter\Core\SerializedRequest;
 use Xycc\Winter\Event\EventDispatcher;
+use Xycc\Winter\Http\Contracts\ToResponse;
 use Xycc\Winter\Http\ExceptionManager;
 use Xycc\Winter\Http\MiddlewareManager;
 use Xycc\Winter\Http\Request\Request;
@@ -172,14 +173,18 @@ class Server
             return;
         }
 
-        $this->dispatcher->dispatch(new OnRequest(SerializedRequest::fromRequest($request)));
 
         Coroutine::getContext()['fd'] = $request->fd;
+        Coroutine::getContext()['app'] = $this->app;
 
+        /**@var Request $req*/
+        /**@var Response $resp*/
         [$req, $resp] = $this->prepareReqResp($request, $response);
 
+        $this->dispatcher->dispatch(new OnRequest($req));
+
         try {
-            $route = $this->router->match($request->server['request_uri'], $request->server['request_method']);
+            $route = $this->router->match($req->getRequestUri(), $req->getMethod());
 
             $handler = $route->getNode()->getHandler();
             $handler = $this->wrapHandler($handler, $route->getNamedParams());
@@ -194,7 +199,7 @@ class Server
             $this->em->catchStatus($e);
             $resp = $this->app->get(Response::class);
             if (!$resp->getContent()) {
-                $resp->setContent(['trace' => $e->getTrace(), 'msg' => $e->getMessage()]);
+                $resp->setContent(json_encode(['trace' => $e->getTrace(), 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
             }
             $resp->send();
             return;
@@ -246,9 +251,17 @@ class Server
             if ($resp instanceof Response) {
                 return $resp;
             }
+
             $response = $this->app->get(Response::class);
-            $response->setStatusCode($resp ? 200 : 204);
-            return $response->setContent($resp ?: '');
+            if ($resp instanceof ToResponse) {
+                $content = $resp->toResponse();
+            } elseif (is_array($resp)) {
+                $content = json_encode($resp, JSON_UNESCAPED_UNICODE);
+            } else {
+                $content = $resp;
+            }
+            $response->setStatusCode($content ? 200 : 204);
+            return $response->setContent($content ?: '');
         };
     }
 }

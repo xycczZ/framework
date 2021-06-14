@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Xycc\Winter\Container\Components;
+namespace Xycc\Winter\Contract\Components;
 
 
+use Attribute;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -26,6 +27,13 @@ class AttributeParser
         $ref = new ReflectionClass($class);
         $attributes = self::collectAttributes($ref->getAttributes(), []);
         return self::$classAttributes[$class] = $attributes;
+    }
+
+    public static function getClassAttrs(string $class, string $attr): array
+    {
+        return array_values(array_filter(self::parseClass($class),
+            fn (ReflectionAttribute $attribute) => $attribute->getName() === $attr
+                || is_subclass_of($attribute->getName(), $attr)));
     }
 
     public static function collectAttributes(array $attributes, array $acc = []): array
@@ -53,6 +61,13 @@ class AttributeParser
         return self::$propAttributes[$class][$prop] = $attributes;
     }
 
+    public static function getPropAttrs(string $class, string $prop, string $attr): array
+    {
+        return array_values(array_filter(self::parseProp($class, $prop),
+            fn (ReflectionAttribute $attribute) => $attribute->getName() === $attr
+                || is_subclass_of($attribute->getName(), $attr)));
+    }
+
     public static function parseMethod(string $class, string $method)
     {
         if (isset(self::$methodAttributes[$class][$method])) {
@@ -64,7 +79,12 @@ class AttributeParser
         return self::$methodAttributes[$class][$method] = $attributes;
     }
 
-    // 搜集所有的注解, 每个注解只收集一次
+    public static function getMethodAttrs(string $class, string $method, string $attr): array
+    {
+        return array_values(array_filter(self::parseMethod($class, $method),
+            fn (ReflectionAttribute $attribute) => $attribute->getName() === $attr
+                || is_subclass_of($attribute->getName(), $attr)));
+    }
 
     public static function parseParam(string $class, string $method, string $param)
     {
@@ -77,6 +97,13 @@ class AttributeParser
         return self::$paramAttributes[$class][$method][$param] = $attributes;
     }
 
+    public static function getParamAttrs(string $class, string $method, string $param, string $attr): array
+    {
+        return array_values(array_filter(self::parseParam($class, $method, $param),
+            fn (ReflectionAttribute $attribute) => $attribute->getName() === $attr
+                || is_subclass_of($attribute->getName(), $attr)));
+    }
+
     /**
      * @param ReflectionAttribute[] $attributes
      */
@@ -85,7 +112,7 @@ class AttributeParser
         foreach ($attributes as $attribute) {
             $attributeClass = $attribute->getName();
 
-            if ($attributeClass === $attr) {
+            if ($attributeClass === $attr || is_subclass_of($attributeClass, $attr)) {
                 return $attribute;
             }
 
@@ -97,5 +124,25 @@ class AttributeParser
         }
 
         return null;
+    }
+
+    public static function hasAttribute(array $attributes, string $attr): bool
+    {
+        foreach ($attributes as $attribute) {
+            $class = $attribute->getName();
+
+            if ($class === $attr || is_subclass_of($class, $attr)) {
+                return true;
+            }
+
+            if ($class !== Attribute::class) {
+                $attrs = (new ReflectionClass($class))->getAttributes();
+                if (self::hasAttribute($attrs, $attr)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

@@ -15,7 +15,7 @@ use RuntimeException;
 use Xycc\Winter\Config\Attributes\Value;
 use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
-use Xycc\Winter\Container\Components\AttributeParser;
+use Xycc\Winter\Contract\Components\AttributeParser;
 use Xycc\Winter\Container\Exceptions\CycleDependencyException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
 use Xycc\Winter\Container\Exceptions\MultiPrimaryException;

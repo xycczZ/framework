@@ -9,7 +9,7 @@ use Xycc\Winter\Event\Attributes\Listener;
 use Xycc\Winter\Tests\Event\Events\AEvent;
 use Xycc\Winter\Tests\Event\Events\StopEvent;
 
-#[Listener(AEvent::class, StopEvent::class)]
+#[Listener(events: [AEvent::class, StopEvent::class])]
 class BListener extends AbstractListener
 {
     public function handle(object $event)

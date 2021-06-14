@@ -49,6 +49,9 @@ class MethodVisitor extends NameResolver
                 [new Node\AttributeGroup([new Node\Attribute(new Node\Name('\\' . Autowired::class))])]
             );
         } elseif ($node instanceof Node\Stmt\ClassMethod && in_array($node->name->name, $this->weavingMethods) && !$node->isFinal() && !$node->isStatic()) {
+            if ($node->isMagic()) {
+                return $node;
+            }
             if ($node->returnType instanceof Node\Name && count($node->returnType?->parts ?: []) === 1 && strtolower($node->returnType?->parts[0]) === 'self') {
                 $node->returnType = new Node\Name('parent', $node->returnType->getAttributes());
             }
