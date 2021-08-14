@@ -26,8 +26,6 @@ trait MethodInfo
     /**
      * 获取含有指定 attribute 的方法
      *
-     * @param string $attribute
-     * @param bool   $extends
      * @return string[]
      */
     public function getMethods(string $attribute, bool $extends = false, bool $direct = false): array
@@ -46,11 +44,6 @@ trait MethodInfo
 
     /**
      * 指定方法是否包含有指定的 attribute
-     *
-     * @param string $method
-     * @param string $attribute
-     * @param bool   $extends
-     * @return bool
      */
     public function methodHasAttribute(string $method, string $attribute, bool $extends = false, bool $direct = false): bool
     {
@@ -60,9 +53,6 @@ trait MethodInfo
     /**
      * 获取指定方法上所有指定的 attribute
      *
-     * @param string $method
-     * @param string $attribute
-     * @param bool   $extends
      * @return ReflectionAttribute[]
      */
     public function getMethodAttributes(string $method, string $attribute, bool $extends = false, bool $direct = false): array

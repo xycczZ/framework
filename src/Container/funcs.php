@@ -2,7 +2,7 @@
 if (!function_exists('filter_map')) {
     function filter_map(array $arr, ?callable $fn = null, mixed $condition = null): array
     {
-        $fn ??= fn ($value, $_key) => $value;
+        $fn ??= fn($value, $_key) => $value;
 
         $result = [];
         foreach ($arr as $key => $value) {
@@ -17,7 +17,7 @@ if (!function_exists('filter_map')) {
 }
 
 if (!function_exists('first')) {
-    function first(array $arr, callable $fn = null)
+    function first(array $arr, callable $fn = null): mixed
     {
         $result = array_filter($arr, $fn, ARRAY_FILTER_USE_BOTH);
         reset($result);
@@ -26,15 +26,19 @@ if (!function_exists('first')) {
 }
 
 if (!function_exists('convert_extra_type')) {
-    function convert_extra_type(string $type, $arg)
+    function convert_extra_type(string $type, mixed $arg): mixed
     {
         return match ($type) {
             'int' => (int)$arg,
             'string' => (string)$arg,
             'float' => (float)$arg,
             'array' => (array)$arg,
-            'bool' => match (strtolower($arg)) {
-                'null', null, 'false', false, '0', 0, [], '0.0', .0 => false,
+            'bool' => match ($arg) {
+                null, false, 0, [], .0 => false,
+                is_string($arg) => match (strtolower($arg)) {
+                    'null', 'false', '0', '0.0' => false,
+                    default => true,
+                },
                 default => true,
             },
             default => $arg,
@@ -46,7 +50,7 @@ if (!function_exists('flatten_map')) {
     function flatten_map(array $arr, callable $func = null, int $depth = INF): array
     {
         $keys = array_keys($arr);
-        $arr = array_map($func, $arr, $keys);
+        $arr  = array_map($func, $arr, $keys);
         do {
             $result = [];
             foreach ($arr as $item) {
@@ -56,8 +60,8 @@ if (!function_exists('flatten_map')) {
                     $result[] = $item;
                 }
             }
-            $arr = $result;
-            $hasArr = count(array_filter($arr, fn ($item) => is_array($item))) > 0;
+            $arr    = $result;
+            $hasArr = count(array_filter($arr, fn($item) => is_array($item))) > 0;
         } while ($depth <= 0 || !$hasArr);
 
         return $arr;

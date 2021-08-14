@@ -14,7 +14,7 @@ use Xycc\Winter\Contract\Attributes\NoProxy;
 #[NoProxy]
 class ClassLoader
 {
-    private $loader;
+    private \Composer\Autoload\ClassLoader $loader;
 
     public function __construct(Application $app)
     {

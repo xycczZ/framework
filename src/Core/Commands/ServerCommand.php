@@ -9,10 +9,11 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Xycc\Winter\Command\Attributes\AsCommand;
 use Xycc\Winter\Container\Application;
 use Xycc\Winter\Core\Servers\Server;
 
-
+#[AsCommand(name: 'server', description: 'server', aliases: ['s'], hidden: false)]
 class ServerCommand extends Command
 {
     public function __construct(private Application $app, string $name = null)
@@ -22,9 +23,6 @@ class ServerCommand extends Command
 
     protected function configure()
     {
-        $this->setName('server');
-        $this->setAliases(['s']);
-
         $this->addArgument('action', InputArgument::OPTIONAL, 'start|stop|reload|restart', 'start');
     }
 

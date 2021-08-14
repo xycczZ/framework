@@ -21,7 +21,7 @@ interface ContainerContract extends ContainerInterface
     /**
      * @return AbstractBeanDefinition[]
      */
-    public function getClassesByAttr(string $attr, bool $extends = false): array;
+    public function getClassesByAttr(string $attr, bool $extends = false, bool $direct = false): array;
 
     public function execute($action, array $extra = []);
 }

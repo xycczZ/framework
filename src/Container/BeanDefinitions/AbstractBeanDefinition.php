@@ -7,6 +7,7 @@ namespace Xycc\Winter\Container\BeanDefinitions;
 use JetBrains\PhpStorm\Pure;
 use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -71,6 +72,9 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this->setters;
     }
 
+    /**
+     * @return array<ReflectionMethod>
+     */
     public function getConfigurationMethods(): array
     {
         return $this->configurationMethods;
@@ -107,8 +111,10 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this->refProps;
     }
 
-    public function getRefParams(string $method, int|string|null $paramNameOrIndex = null): array|null|ReflectionParameter
-    {
+    public function getRefParams(
+        string $method,
+        int|string|null $paramNameOrIndex = null
+    ): array|null|ReflectionParameter {
         if ($paramNameOrIndex === null) {
             return $this->refParams[$method] ?? null;
         }
@@ -117,7 +123,13 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         return $this->refParams[$method][$name] ?? null;
     }
 
-    public function reload(SplFileInfo $file, string $fqn)
+    /**
+     * @param SplFileInfo $file
+     * @param string      $fqn
+     *
+     * @throws ReflectionException
+     */
+    public function reload(SplFileInfo $file, string $fqn): void
     {
         $this->fileInfo = $file;
         $this->className = $fqn;
@@ -125,11 +137,14 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         $this->parseMetadata($this->refClass);
     }
 
+    /**
+     * @return array<ReflectionAttribute>
+     */
     protected function filterAttribute(array $attributes, string $attribute, bool $extends = false): array
     {
         return array_values(array_filter(
             $attributes,
-            fn (ReflectionAttribute $attr) => $extends
+            fn(ReflectionAttribute $attr) => $extends
                 ? $this->isSameOrSubClassOf($attribute, $attr->getName())
                 : $attribute === $attr->getName()
         ));
@@ -149,6 +164,7 @@ abstract class AbstractBeanDefinition implements BeanDefinitionContract
         if ($type instanceof ReflectionUnionType) {
             throw new InvalidBindingException('The types of beans or autowired objects could not be union type');
         }
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
         return $type;
     }
 

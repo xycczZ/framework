@@ -4,6 +4,7 @@
 namespace Xycc\Winter\Container\Factory;
 
 use Closure;
+use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -15,7 +16,6 @@ use RuntimeException;
 use Xycc\Winter\Config\Attributes\Value;
 use Xycc\Winter\Container\BeanDefinitionCollection;
 use Xycc\Winter\Container\BeanDefinitions\AbstractBeanDefinition;
-use Xycc\Winter\Contract\Components\AttributeParser;
 use Xycc\Winter\Container\Exceptions\CycleDependencyException;
 use Xycc\Winter\Container\Exceptions\InvalidBindingException;
 use Xycc\Winter\Container\Exceptions\MultiPrimaryException;
@@ -27,6 +27,7 @@ use Xycc\Winter\Contract\Attributes\Lazy;
 use Xycc\Winter\Contract\Attributes\NoProxy;
 use Xycc\Winter\Contract\Attributes\Required;
 use Xycc\Winter\Contract\Attributes\Scope;
+use Xycc\Winter\Contract\Components\AttributeParser;
 
 #[Component, NoProxy]
 class BeanFactory
@@ -38,14 +39,26 @@ class BeanFactory
      */
     public array $beans = [];
 
+    /**
+     * @var array<string>
+     */
     private static array $dependencyNames = [];
 
     public function __construct(
         protected BeanDefinitionCollection $manager
-    )
-    {
+    ) {
     }
 
+    /**
+     * @template     T
+     *
+     * @param class-string<T> $name
+     *
+     * @return T
+     *
+     * @throws ReflectionException
+     * @noinspection PhpReturnDocTypeMismatchInspection
+     */
     public function get(string $name, ?string $type = null, ?BeanInfo $parent = null)
     {
         if ($type) {
@@ -169,15 +182,21 @@ class BeanFactory
         if (count($primary) === 1) {
             return $this->resolveInstance(current($primary), $parent);
         } elseif (count($primary) > 1) {
-            throw new MultiPrimaryException(sprintf('Too many #[Primary]: %s', implode(', ', array_map(fn (BeanInfo $info) => $info->getName(), $primary))));
+            throw new MultiPrimaryException(sprintf('Too many #[Primary]: %s',
+                implode(', ', array_map(fn(BeanInfo $info) => $info->getName(), $primary))));
         }
 
-        $fitNames = array_filter($infos, fn (BeanInfo $info) => $info->getName() === ($name ?: $ref->name));
+        $fitNames = array_filter($infos, fn(BeanInfo $info) => $info->getName() === ($name ?: $ref->name));
         if (count($fitNames) === 1) {
             return $this->resolveInstance(current($fitNames), $parent);
         }
 
-        throw new InvalidBindingException(sprintf('Cannot determine the unique bean, names: %s', implode(', ', array_map(fn (BeanInfo $info) => $info->getName(), $fitNames))));
+        throw new InvalidBindingException(
+            sprintf(
+                'Cannot determine the unique bean, names: %s',
+                implode(', ', array_map(fn(BeanInfo $info) => $info->getName(), $fitNames))
+            )
+        );
     }
 
     public function has(string $name): bool
@@ -185,7 +204,14 @@ class BeanFactory
         return isset($this->beans[$name]);
     }
 
-    protected function resolveInstance(BeanInfo $info, ?BeanInfo $parent = null)
+    /**
+     * @param BeanInfo      $info
+     * @param BeanInfo|null $parent
+     *
+     * @return object
+     * @throws ReflectionException
+     */
+    protected function resolveInstance(BeanInfo $info, ?BeanInfo $parent = null): object
     {
         switch ($info->getScope()) {
             case Scope::SCOPE_SINGLETON:
@@ -234,7 +260,13 @@ class BeanFactory
         return $instance;
     }
 
-    protected function createInstance(BeanInfo $info)
+    /**
+     * @param BeanInfo $info
+     *
+     * @return object
+     * @throws ReflectionException
+     */
+    protected function createInstance(BeanInfo $info): object
     {
         if ($info->isFromConf()) {
             $confName = $info->getConfName();
@@ -245,13 +277,18 @@ class BeanFactory
             return $this->execute([$conf, $info->getConfMethod()]);
         }
 
-        $result = $this->invokeConstructor($info);
-        return $result;
+        return $this->invokeConstructor($info);
     }
 
+    /**
+     * @param BeanInfo $info
+     *
+     * @return object
+     * @throws ReflectionException
+     */
     protected function invokeConstructor(BeanInfo $info)
     {
-        $class = $info->getDef()->getRefClass();
+        $class       = $info->getDef()->getRefClass();
         $constructor = $class->getConstructor();
         if ($constructor === null) {
             return $class->newInstanceWithoutConstructor();
@@ -267,14 +304,20 @@ class BeanFactory
     }
 
     /**
-     * @param ReflectionParameter[] $params
+     * @param BeanInfo|null $parent
+     * @param array         $params
+     * @param array         $extra
+     *
+     * @return array
+     * @throws ReflectionException
      */
-    private function getMethodArgs(?BeanInfo $parent, array $params, array $extra = [])
+    private function getMethodArgs(?BeanInfo $parent, array $params, array $extra = []): array
     {
         $args = [];
         foreach ($params as $param) {
-            $required = AttributeParser::getAttribute($param->getAttributes(), Required::class)?->newInstance()?->required ?: true;
-            $arg = $this->handlePredefinedAttributes($parent, $param, $required);
+            $required = AttributeParser::getAttribute($param->getAttributes(),
+                Required::class)?->newInstance()?->required ?: true;
+            $arg      = $this->handlePredefinedAttributes($parent, $param, $required);
             if ($arg !== null) {
                 $args[] = $arg;
                 continue;
@@ -432,11 +475,12 @@ class BeanFactory
         return $obj->{$cb[1]}(...$args);
     }
 
-    private function getRefType(ReflectionType $type): ?ReflectionNamedType
+    private function getRefType(?ReflectionType $type): ?ReflectionNamedType
     {
         if ($type instanceof ReflectionUnionType) {
             throw new RuntimeException('Bean以及需要注入 Bean 的地方都不能是联合类型');
         }
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
         return $type;
     }
 

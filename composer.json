@@ -26,15 +26,16 @@
         "doctrine/dbal": "4.0.x-dev"
     },
     "replace": {
-        "xycc/contract": "self.version",
-        "xycc/container": "self.version",
-        "xycc/config": "self.version",
-        "xycc/core": "self.version",
-        "xycc/event": "self.version",
-        "xycc/route": "self.version",
-        "xycc/http": "self.version",
-        "xycc/aspect": "self.version",
-        "xycc/validator": "self.version"
+      "xycc/contract": "self.version",
+      "xycc/container": "self.version",
+      "xycc/config": "self.version",
+      "xycc/core": "self.version",
+      "xycc/event": "self.version",
+      "xycc/route": "self.version",
+      "xycc/http": "self.version",
+      "xycc/aspect": "self.version",
+      "xycc/validator": "self.version",
+      "xycc/command": "self.version"
     },
     "require-dev": {
         "phpunit/phpunit": "10.0.x-dev",
@@ -58,15 +59,16 @@
     },
     "extra": {
         "discover": [
-            "Xycc\\Winter\\Config\\ConfigBoot",
-            "Xycc\\Winter\\Event\\EventBoot",
-            "Xycc\\Winter\\Route\\RouterBoot",
-            "Xycc\\Winter\\Container\\ContainerBoot",
-            "Xycc\\Winter\\Core\\CoreBoot",
-            "Xycc\\Winter\\Http\\HttpBoot",
-            "Xycc\\Winter\\Aspect\\AspectBoot",
-            "Xycc\\Winter\\Validator\\ValidatorBoot",
-            "Xycc\\Winter\\Database\\DatabaseBoot"
+          "Xycc\\Winter\\Config\\ConfigBoot",
+          "Xycc\\Winter\\Event\\EventBoot",
+          "Xycc\\Winter\\Route\\RouterBoot",
+          "Xycc\\Winter\\Container\\ContainerBoot",
+          "Xycc\\Winter\\Core\\CoreBoot",
+          "Xycc\\Winter\\Http\\HttpBoot",
+          "Xycc\\Winter\\Aspect\\AspectBoot",
+          "Xycc\\Winter\\Validator\\ValidatorBoot",
+          "Xycc\\Winter\\Database\\DatabaseBoot",
+          "Xycc\\Winter\\Command\\CommandBoot"
         ]
     },
     "scripts": {

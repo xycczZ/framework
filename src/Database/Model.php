@@ -4,6 +4,7 @@
 namespace Xycc\Winter\Database;
 
 
+use Doctrine\DBAL\Exception as DBALException;
 use Xycc\Winter\Contract\Components\AttributeParser;
 use Xycc\Winter\Database\Attributes\Table;
 use Xycc\Winter\Database\Query\QueryBuilder;
@@ -24,6 +25,9 @@ abstract class Model
         $this->query = new QueryBuilder($this);
     }
 
+    /**
+     * @throws DBALException
+     */
     public function first($id)
     {
         $result = $this->where('id = ?')
@@ -37,7 +41,7 @@ abstract class Model
     public function table(): string
     {
         if (! self::$tableName) {
-            $attrs = AttributeParser::parseClass(static::class);
+            $attrs           = AttributeParser::parseClass(static::class);
             self::$tableName = $attrs[Table::class]->newInstance()->tableName;
         }
         return self::$tableName;

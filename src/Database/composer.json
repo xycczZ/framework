@@ -18,5 +18,8 @@
     "xycc/contract": "dev-master",
     "symfony/console": "5.x-dev",
     "doctrine/dbal": "4.0.x-dev"
+  },
+  "suggest": {
+    "xycc/command": "dev-master"
   }
 }

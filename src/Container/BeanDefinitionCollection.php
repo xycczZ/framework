@@ -37,7 +37,7 @@ class BeanDefinitionCollection
         }
     }
 
-    public function hasClass(?string $className)
+    public function hasClass(?string $className): bool
     {
         if (!$className) {
             return false;

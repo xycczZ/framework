@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Xycc\Winter\Container;
 
 use SplFileInfo;
+use Symfony\Component\Console\Application as Command;
 use Xycc\Winter\Config\Config;
 use Xycc\Winter\Container\{BeanDefinitions\ClassBeanDefinition, Factory\BeanFactory, Proxy\ProxyManager};
 use Xycc\Winter\Contract\{Attributes\Component, Attributes\NoProxy, Bootstrap, Container\ContainerContract};
@@ -27,10 +28,12 @@ class Application implements ContainerContract
 
     protected BeanFactory $beanFactory;
 
+    private Command $command;
+
     public function __construct()
     {
         $this->beanDefinitions = new BeanDefinitionCollection();
-        $this->beanFactory = new BeanFactory($this->beanDefinitions);
+        $this->beanFactory     = new BeanFactory($this->beanDefinitions);
     }
 
     public function getRootPath(): string
@@ -72,6 +75,8 @@ class Application implements ContainerContract
     public function start(string $rootPath)
     {
         $this->rootPath = rtrim($rootPath, '/');
+        $this->command  = new Command();
+        $this->command->setAutoExit(false);
 
         static::$app = $this;
 
@@ -88,6 +93,8 @@ class Application implements ContainerContract
         $this->bootstrap();
 
         $this->collectComponents();
+
+        return $this->run();
     }
 
     protected function addPredefinedComponents()
@@ -148,6 +155,7 @@ class Application implements ContainerContract
                 $this->beanFactory->addBean($def);
             }
             $defs = $def->setUpConfiguration();
+
             foreach ($defs as ['def' => $definition, 'method' => $method]) {
                 $this->beanFactory->addBean($def, $method, $definition);
             }
@@ -299,5 +307,15 @@ HERE
         foreach (glob($this->config->get('app.runtime') . '/weaving/*.php') as $item) {
             unlink($item);
         }
+    }
+
+    public function getCommand(): Command
+    {
+        return $this->command;
+    }
+
+    public function run()
+    {
+        return $this->command->run();
     }
 }

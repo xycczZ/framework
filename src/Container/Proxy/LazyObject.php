@@ -12,9 +12,9 @@ trait LazyObject
     private string $__BEAN_NAME__;
     private BeanFactory $__BEAN_FACTORY__;
 
-    public function __SET_BEAN_INFO__(string $name, BeanFactory $factory)
+    public function __SET_BEAN_INFO__(string $name, BeanFactory $factory): static
     {
-        $this->__BEAN_NAME__ = $name;
+        $this->__BEAN_NAME__    = $name;
         $this->__BEAN_FACTORY__ = $factory;
         return $this;
     }

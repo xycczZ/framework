@@ -22,6 +22,7 @@ use Xycc\Winter\Contract\Attributes\Scope;
 trait CollectBeanInfo
 {
     protected BeanDefinitionCollection $manager;
+    public array                       $beans = [];
 
     public function addBean(AbstractBeanDefinition $def, ?ReflectionMethod $method = null, ?AbstractBeanDefinition $origin = null)
     {

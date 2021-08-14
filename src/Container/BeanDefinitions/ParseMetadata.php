@@ -9,11 +9,11 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
-use Xycc\Winter\Contract\Components\AttributeParser;
 use Xycc\Winter\Contract\Attributes\Autowired;
 use Xycc\Winter\Contract\Attributes\Bean;
 use Xycc\Winter\Contract\Attributes\Component;
 use Xycc\Winter\Contract\Attributes\Configuration;
+use Xycc\Winter\Contract\Components\AttributeParser;
 
 
 trait ParseMetadata
@@ -96,18 +96,18 @@ trait ParseMetadata
         );
     }
 
-    protected function handlePropAttrs(ReflectionProperty $property)
+    protected function handlePropAttrs(ReflectionProperty $property): void
     {
-        $attributes = $property->getAttributes();
-        $this->propertyAttributes[$property->getName()] = $attributes;
+        $attributes                                        = $property->getAttributes();
+        $this->propertyAttributes[$property->getName()]    = $attributes;
         $this->allPropertyAttributes[$property->getName()] = AttributeParser::collectAttributes($attributes);
     }
 
     // 魔术方法是否要过滤掉
-    protected function handleMethodAttrs(ReflectionMethod $method)
+    protected function handleMethodAttrs(ReflectionMethod $method): void
     {
-        $attributes = $method->getAttributes();
-        $this->methodAttributes[$method->getName()] = $attributes;
+        $attributes                                    = $method->getAttributes();
+        $this->methodAttributes[$method->getName()]    = $attributes;
         $this->allMethodAttributes[$method->getName()] = AttributeParser::collectAttributes($attributes);
 
         if ($this->isConfiguration) {
@@ -142,10 +142,10 @@ trait ParseMetadata
         return false;
     }
 
-    protected function handleParamAttrs(ReflectionMethod $method, ReflectionParameter $parameter)
+    protected function handleParamAttrs(ReflectionMethod $method, ReflectionParameter $parameter): void
     {
-        $attributes = $parameter->getAttributes();
-        $this->paramAttributes[$method->getName()][$parameter->getName()] = $attributes;
+        $attributes                                                          = $parameter->getAttributes();
+        $this->paramAttributes[$method->getName()][$parameter->getName()]    = $attributes;
         $this->allParamAttributes[$method->getName()][$parameter->getName()] = AttributeParser::collectAttributes($attributes);
     }
 

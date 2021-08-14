@@ -29,10 +29,6 @@ trait ClassInfo
 
     /**
      * this class contains the specified attribute?
-     *
-     * @param string $attribute
-     * @param bool   $extends
-     * @return bool
      */
     public function classHasAttribute(string $attribute, bool $extends = false, bool $direct = false): bool
     {
@@ -43,7 +39,8 @@ trait ClassInfo
      * get all specified attributes of current class
      *
      * @param string $attribute Attribute class FQN, used to filter attributes
-     * @param bool   $extends   determines whether need to search for subclasses
+     * @param bool   $extends   determines whether to need to search for subclasses
+     *
      * @return ReflectionAttribute[]
      */
     public function getClassAttributes(string $attribute, bool $extends = false, bool $direct = false): array

@@ -5,6 +5,8 @@ namespace Xycc\Winter\Container\BeanDefinitions;
 
 
 use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
 use ReflectionNamedType;
 use SplFileInfo;
 use Xycc\Winter\Container\BeanDefinitionCollection;
@@ -13,16 +15,23 @@ use Xycc\Winter\Contract\Attributes\Bean;
 
 class ClassBeanDefinition extends AbstractBeanDefinition
 {
+    /**
+     * @throws ReflectionException
+     */
     public function __construct(string $type, SplFileInfo $fileInfo, BeanDefinitionCollection $manager)
     {
-        $this->fileInfo = $fileInfo;
+        $this->fileInfo  = $fileInfo;
         $this->className = $type;
-        $this->manager = $manager;
-        $this->refClass = new ReflectionClass($this->className);
+        $this->manager   = $manager;
+        $this->refClass  = new ReflectionClass($this->className);
         $this->parseMetadata($this->refClass);
         $this->canProxy = $this->refClass->isInstantiable() && !$this->refClass->isFinal();
     }
 
+    /**
+     * @return array<array{def: AbstractBeanDefinition, method: ReflectionMethod}>
+     * @throws ReflectionException
+     */
     public function setUpConfiguration(): array
     {
         if (!$this->isConfiguration) {
